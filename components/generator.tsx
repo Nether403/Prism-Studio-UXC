@@ -34,9 +34,13 @@ import {
 } from "@/lib/recommend"
 import { generateResponseSchema, type GenerateResponse, type GenerateTheme } from "@/lib/generate-schema"
 import { usePrismTheme } from "@/components/prism-theme-provider"
-import type { Theme } from "@/lib/themes"
+import { DEFAULT_THEME, type Theme } from "@/lib/themes"
 import { saveStack } from "@/app/actions/stack"
 import { cn } from "@/lib/utils"
+import { PreviewPane } from "@/components/preview-pane"
+import { LibraryDemo } from "@/components/library-demo"
+import { ExportActions } from "@/components/export-actions"
+import type { ExportInput } from "@/lib/exporters"
 
 const SUGGESTIONS = [
   "An immersive product launch site for a wireless audio brand with cinematic 3D and bold scroll-driven storytelling.",
@@ -201,6 +205,46 @@ export function Generator() {
 
   const hasAi = !!object?.headline
   const headline = object?.headline ?? recommendation?.summary ?? ""
+
+  // The theme used for the preview: either the AI-generated theme (once
+  // enough has streamed in) or the current default. This means the preview
+  // *always* shows something meaningful, even before the user clicks Apply.
+  const previewTheme: Theme = useMemo(() => {
+    if (object?.theme && object.theme.background && object.theme.foreground && object.theme.primary) {
+      try {
+        return aiThemeToTheme(object.theme as GenerateTheme)
+      } catch {
+        return DEFAULT_THEME
+      }
+    }
+    return DEFAULT_THEME
+  }, [object?.theme])
+
+  const exportInput: ExportInput | null = useMemo(() => {
+    if (!recommendation) return null
+    const reasons: Record<string, string> = {}
+    object?.reasons?.forEach((r) => {
+      if (r?.libraryId && r.why) reasons[r.libraryId] = r.why
+    })
+    return {
+      headline: object?.headline ?? recommendation.summary,
+      rationale: object?.rationale ?? recommendation.summary,
+      brief: input.prompt,
+      vibe: input.vibe,
+      audience: input.audience,
+      stack: recommendation.stack.map((s) => ({
+        id: s.id,
+        name: s.name,
+        category: s.category,
+        tagline: s.tagline,
+        url: s.url,
+      })),
+      reasons,
+      theme: previewTheme,
+    }
+  }, [recommendation, object?.headline, object?.rationale, object?.reasons, input, previewTheme])
+
+  const exportReady = !!recommendation && !isLoading
 
   return (
     <section id="generator" className="relative py-24 md:py-32 bg-background/95 backdrop-blur-sm">
@@ -408,6 +452,23 @@ export function Generator() {
                 {/* AI Theme card */}
                 {object?.theme && <ThemeCard theme={object.theme} onApply={handleApplyTheme} onReset={reset} />}
 
+                {/* Live preview pane — themed mini-site */}
+                <div className="result-summary mt-8">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                      Live preview
+                    </span>
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      tokens · type · motion
+                    </span>
+                  </div>
+                  <PreviewPane
+                    theme={previewTheme}
+                    stackIds={recommendation.stack.map((s) => s.id)}
+                    brandName={previewTheme.name}
+                  />
+                </div>
+
                 {/* Stack list */}
                 <ol className="mt-10 grid gap-3">
                   {recommendation.stack.map((lib, i) => (
@@ -422,7 +483,26 @@ export function Generator() {
                   ))}
                 </ol>
 
-                <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-dashed border-border p-5">
+                {/* Export actions — turn the brief into something runnable */}
+                <div className="mt-8">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                      Take it with you
+                    </span>
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      v0 · zip · stackblitz
+                    </span>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card/40 p-4">
+                    <ExportActions input={exportInput} ready={exportReady} />
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      The starter ships a Next.js app with your theme, fonts, and the libraries
+                      above already wired up.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-dashed border-border p-5">
                   <div className="flex items-center gap-3">
                     <Cpu className="h-5 w-5 text-primary" />
                     <div>
@@ -693,7 +773,7 @@ function StackCard({
           ) : null}
         </div>
 
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex shrink-0 flex-col items-end gap-3">
           <a
             href={library.url}
             target="_blank"
@@ -703,6 +783,11 @@ function StackCard({
           >
             <ExternalLink className="h-4 w-4" />
           </a>
+          <LibraryDemo
+            id={library.id}
+            category={library.category}
+            className="hidden h-16 w-28 sm:block"
+          />
           <div className="text-right">
             <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
               Impact

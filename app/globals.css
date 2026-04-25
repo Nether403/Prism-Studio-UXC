@@ -162,6 +162,11 @@
   .animate-pulse-glow {
     animation: pulse-glow 3s ease-in-out infinite;
   }
+
+  @keyframes ogl-drift {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+  }
 }
 
 /* Custom cursor (hidden on touch devices via JS) */
