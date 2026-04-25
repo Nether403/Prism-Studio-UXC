@@ -6,6 +6,7 @@ import { LibraryGrid } from "@/components/library-grid"
 import { Integrations } from "@/components/integrations"
 import { Capabilities } from "@/components/capabilities"
 import { Footer } from "@/components/footer"
+import { CommandPalette } from "@/components/command-palette"
 
 export default function Page() {
   return (
@@ -18,6 +19,7 @@ export default function Page() {
       <LibraryGrid />
       <Integrations />
       <Footer />
+      <CommandPalette />
     </main>
   )
 }

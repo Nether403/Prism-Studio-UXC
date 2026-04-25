@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sparkles } from "lucide-react"
+import { CommandTrigger } from "@/components/command-palette"
 
 export function Nav() {
   const [scrolled, setScrolled] = useState(false)
@@ -34,25 +36,23 @@ export function Nav() {
         </a>
 
         <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
-          <a href="#generator" className="hover:text-foreground transition">
+          <a href="#generator" className="hover:text-foreground transition" data-cursor="hover">
             Generator
           </a>
-          <a href="#libraries" className="hover:text-foreground transition">
+          <a href="#libraries" className="hover:text-foreground transition" data-cursor="hover">
             Libraries
           </a>
-          <a href="#integrations" className="hover:text-foreground transition">
+          <a href="#integrations" className="hover:text-foreground transition" data-cursor="hover">
             Integrations
           </a>
-          <a href="#docs" className="hover:text-foreground transition">
-            Docs
-          </a>
+          <Link href="/gallery" className="hover:text-foreground transition" data-cursor="hover">
+            Gallery
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
-            Sign in
-          </Button>
-          <Button size="sm" className="font-medium">
+          <CommandTrigger />
+          <Button size="sm" className="font-medium" data-cursor="hover">
             Launch studio
           </Button>
         </div>

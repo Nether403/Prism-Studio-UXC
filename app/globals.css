@@ -40,6 +40,29 @@
   --sidebar-ring: oklch(0.92 0.22 125);
 }
 
+/* Maps friendly font names → next/font CSS variables.
+   Used by the live-theme system so AI can name a font and we apply it. */
+[data-theme-name] {
+  /* Default fallbacks — JS sets --font-display-family / --font-body-family at runtime */
+  --font-display-family: var(--font-display);
+  --font-body-family: var(--font-sans);
+}
+
+[style*='--font-display-family'][style*='Instrument Serif'] { --font-display: var(--font-display); }
+[style*='--font-display-family'][style*='Bricolage'] { --font-display: var(--font-bricolage); }
+[style*='--font-display-family'][style*='Space Grotesk'] { --font-display: var(--font-space); }
+[style*='--font-display-family'][style*='Fraunces'] { --font-display: var(--font-fraunces); }
+[style*='--font-display-family'][style*='JetBrains'] { --font-display: var(--font-jetbrains); }
+[style*='--font-display-family'][style*='Playfair'] { --font-display: var(--font-playfair); }
+[style*='--font-display-family'][style*='DM Serif'] { --font-display: var(--font-dm-serif); }
+[style*='--font-display-family'][style*='Anton'] { --font-display: var(--font-anton); }
+
+[style*='--font-body-family'][style*='Geist Mono'] { --font-sans: var(--font-mono); }
+[style*='--font-body-family'][style*='Geist'] { --font-sans: var(--font-sans); }
+[style*='--font-body-family'][style*='Inter'] { --font-sans: var(--font-inter); }
+[style*='--font-body-family'][style*='JetBrains'] { --font-sans: var(--font-jetbrains); }
+[style*='--font-body-family'][style*='Plus Jakarta'] { --font-sans: var(--font-jakarta); }
+
 @theme inline {
   --font-sans: var(--font-sans), 'Geist Fallback', system-ui, sans-serif;
   --font-mono: var(--font-mono), 'Geist Mono Fallback', monospace;

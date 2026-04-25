@@ -1,14 +1,8 @@
 "use client"
 
-import dynamic from "next/dynamic"
 import { useEffect, useRef } from "react"
 import gsap from "gsap"
 import { ArrowDown } from "lucide-react"
-
-const Scene = dynamic(() => import("./scene").then((m) => m.Scene), {
-  ssr: false,
-  loading: () => null,
-})
 
 export function Hero() {
   const root = useRef<HTMLDivElement>(null)
@@ -55,12 +49,7 @@ export function Hero() {
       ref={root}
       className="relative min-h-[100svh] overflow-hidden grain"
     >
-      {/* WebGL canvas background */}
-      <div className="absolute inset-0">
-        <Scene />
-      </div>
-
-      {/* Top gradient & vignette */}
+      {/* Top gradient & vignette (the WebGL scene lives globally) */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--background)_85%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-background to-transparent" />

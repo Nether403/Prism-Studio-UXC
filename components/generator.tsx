@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import gsap from "gsap"
+import { experimental_useObject as useObject } from "@ai-sdk/react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -9,8 +11,31 @@ import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, Wand2, Lock, ExternalLink, Cpu, Gauge } from "lucide-react"
-import { recommend, type Audience, type GeneratorInput, type Performance, type Recommendation, type Vibe } from "@/lib/recommend"
+import {
+  Sparkles,
+  Wand2,
+  Lock,
+  ExternalLink,
+  Cpu,
+  Gauge,
+  Palette,
+  Save,
+  RotateCcw,
+  Share2,
+  Copy,
+} from "lucide-react"
+import {
+  recommend,
+  type Audience,
+  type GeneratorInput,
+  type Performance,
+  type Recommendation,
+  type Vibe,
+} from "@/lib/recommend"
+import { generateResponseSchema, type GenerateResponse, type GenerateTheme } from "@/lib/generate-schema"
+import { usePrismTheme } from "@/components/prism-theme-provider"
+import type { Theme } from "@/lib/themes"
+import { saveStack } from "@/app/actions/stack"
 import { cn } from "@/lib/utils"
 
 const SUGGESTIONS = [
@@ -20,14 +45,36 @@ const SUGGESTIONS = [
   "A playful landing page for a board game with physics interactions and particles.",
 ]
 
+function aiThemeToTheme(t: GenerateTheme): Theme {
+  return {
+    name: t.name,
+    background: t.background,
+    foreground: t.foreground,
+    card: t.card,
+    primary: t.primary,
+    primaryForeground: t.primaryForeground,
+    accent: t.accent,
+    muted: t.muted,
+    mutedForeground: t.mutedForeground,
+    border: t.border,
+    displayFont: t.displayFont,
+    displayItalic: t.displayItalic,
+    bodyFont: t.bodyFont,
+    radius: t.radius,
+    motto: t.motto,
+  }
+}
+
 export function Generator() {
+  const { setTheme, reset } = usePrismTheme()
   const [prompt, setPrompt] = useState(SUGGESTIONS[0])
   const [vibe, setVibe] = useState<Vibe>("editorial")
   const [audience, setAudience] = useState<Audience>("creative")
   const [performance, setPerformance] = useState<Performance>("balanced")
   const [includePaid, setIncludePaid] = useState(true)
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [savedId, setSavedId] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   const resultRef = useRef<HTMLDivElement>(null)
 
@@ -36,17 +83,25 @@ export function Generator() {
     [prompt, vibe, audience, performance, includePaid]
   )
 
+  const { object, submit, isLoading, error, stop } = useObject<GenerateResponse>({
+    api: "/api/generate",
+    schema: generateResponseSchema,
+  })
+
   function handleGenerate() {
-    setIsGenerating(true)
-    // Simulate compute for the dramatic reveal
-    setTimeout(() => {
-      const result = recommend(input)
-      setRecommendation(result)
-      setIsGenerating(false)
-    }, 600)
+    const rec = recommend(input)
+    setRecommendation(rec)
+    setSavedId(null)
+    submit(input)
   }
 
-  // Animate result in
+  // Initial deterministic recommendation so the page feels alive on load
+  useEffect(() => {
+    setRecommendation(recommend(input))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Animate static recommendation cards
   useEffect(() => {
     if (!recommendation || !resultRef.current) return
     const ctx = gsap.context(() => {
@@ -76,14 +131,79 @@ export function Generator() {
     return () => ctx.revert()
   }, [recommendation])
 
-  // Generate once on mount so the page feels alive
-  useEffect(() => {
-    setRecommendation(recommend(input))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const reasonMap = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {}
+    object?.reasons?.forEach((r) => {
+      if (r?.libraryId && r.why) map[r.libraryId] = r.why
+    })
+    return map
+  }, [object?.reasons])
+
+  function handleApplyTheme() {
+    if (!object?.theme) return
+    try {
+      const theme = aiThemeToTheme(object.theme as GenerateTheme)
+      setTheme(theme)
+      toast.success(`Applied "${theme.name}"`, {
+        description: "Page re-themed with your generated tokens.",
+      })
+    } catch (e) {
+      toast.error("Could not apply theme")
+    }
+  }
+
+  async function handleSave() {
+    if (!recommendation || !object?.headline || !object?.theme) {
+      toast.error("Wait for generation to finish.")
+      return
+    }
+    setIsSaving(true)
+    const reasons: Record<string, string> = {}
+    object.reasons?.forEach((r) => {
+      if (r?.libraryId && r.why) reasons[r.libraryId] = r.why
+    })
+
+    const res = await saveStack({
+      prompt: input.prompt,
+      vibe: input.vibe,
+      audience: input.audience,
+      performance: input.performance,
+      includePaid: input.includePaid,
+      headline: object.headline,
+      rationale: object.rationale ?? "",
+      stackIds: recommendation.stack.map((s) => s.id),
+      reasons,
+      theme: object.theme,
+      impactScore: recommendation.impactScore,
+      perfBudget: recommendation.perfBudget,
+    })
+    setIsSaving(false)
+    if ("id" in res) {
+      setSavedId(res.id)
+      toast.success("Saved to gallery", {
+        description: "Anyone with the link can view this stack.",
+        action: {
+          label: "Open",
+          onClick: () => window.open(`/s/${res.id}`, "_blank"),
+        },
+      })
+    } else {
+      toast.error("Could not save", { description: res.error })
+    }
+  }
+
+  function handleCopyShare() {
+    if (!savedId) return
+    const url = `${window.location.origin}/s/${savedId}`
+    navigator.clipboard.writeText(url)
+    toast.success("Share link copied")
+  }
+
+  const hasAi = !!object?.headline
+  const headline = object?.headline ?? recommendation?.summary ?? ""
 
   return (
-    <section id="generator" className="relative py-24 md:py-32">
+    <section id="generator" className="relative py-24 md:py-32 bg-background/95 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid gap-10 lg:grid-cols-[1.1fr_1.4fr] lg:gap-16">
           {/* Input panel */}
@@ -116,6 +236,7 @@ export function Generator() {
                       key={i}
                       onClick={() => setPrompt(s)}
                       className="rounded-full border border-border bg-card px-3 py-1 text-[11px] text-muted-foreground hover:border-primary/50 hover:text-foreground transition"
+                      data-cursor="hover"
                     >
                       {s.slice(0, 32).split(" ").slice(0, 4).join(" ")}…
                     </button>
@@ -134,15 +255,17 @@ export function Generator() {
                     onValueChange={(v) => v && setVibe(v as Vibe)}
                     className="mt-2 flex flex-wrap gap-2"
                   >
-                    {(["minimal", "bold", "editorial", "playful", "experimental"] as Vibe[]).map((v) => (
-                      <ToggleGroupItem
-                        key={v}
-                        value={v}
-                        className="rounded-full border border-border bg-card px-3 py-1.5 text-xs capitalize data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:border-primary"
-                      >
-                        {v}
-                      </ToggleGroupItem>
-                    ))}
+                    {(["minimal", "bold", "editorial", "playful", "experimental"] as Vibe[]).map(
+                      (v) => (
+                        <ToggleGroupItem
+                          key={v}
+                          value={v}
+                          className="rounded-full border border-border bg-card px-3 py-1.5 text-xs capitalize data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:border-primary"
+                        >
+                          {v}
+                        </ToggleGroupItem>
+                      )
+                    )}
                   </ToggleGroup>
                 </div>
 
@@ -207,17 +330,18 @@ export function Generator() {
                 </div>
               </div>
 
-              <div className="p-3 border-t border-border">
+              <div className="p-3 border-t border-border flex gap-2">
                 <Button
                   onClick={handleGenerate}
-                  disabled={isGenerating || prompt.trim().length < 6}
-                  className="w-full h-12 text-base font-medium"
+                  disabled={isLoading || prompt.trim().length < 6}
+                  className="flex-1 h-12 text-base font-medium"
                   size="lg"
+                  data-cursor="hover"
                 >
-                  {isGenerating ? (
+                  {isLoading ? (
                     <>
                       <span className="h-2 w-2 rounded-full bg-primary-foreground animate-pulse" />
-                      Composing…
+                      Composing with AI…
                     </>
                   ) : (
                     <>
@@ -226,19 +350,42 @@ export function Generator() {
                     </>
                   )}
                 </Button>
+                {isLoading && (
+                  <Button variant="outline" onClick={() => stop()} size="lg" className="h-12">
+                    Stop
+                  </Button>
+                )}
               </div>
+              {error && (
+                <div className="px-5 pb-4 text-xs text-destructive">
+                  {error.message ?? "Generation failed."}
+                </div>
+              )}
             </Card>
           </div>
 
           {/* Result panel */}
           <div ref={resultRef} className="min-h-[600px]">
-            <SectionLabel index="02" label="Recommended stack" />
+            <SectionLabel index="02" label={hasAi ? "AI-curated stack" : "Recommended stack"} />
             {recommendation && (
               <>
                 <div className="result-summary mt-4">
-                  <h3 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-tight text-pretty">
-                    {recommendation.summary}
+                  <h3
+                    className={cn(
+                      "font-display text-3xl md:text-4xl tracking-[-0.02em] leading-tight text-pretty min-h-[3rem]",
+                      isLoading && !object?.headline && "opacity-60"
+                    )}
+                  >
+                    {headline || (isLoading ? "Composing…" : "")}
+                    {isLoading && object?.headline && (
+                      <span className="inline-block w-2 h-7 ml-1 bg-primary animate-pulse align-baseline" />
+                    )}
                   </h3>
+                  {object?.rationale && (
+                    <p className="mt-3 text-muted-foreground leading-relaxed text-pretty max-w-2xl">
+                      {object.rationale}
+                    </p>
+                  )}
                 </div>
 
                 {/* Meters */}
@@ -258,11 +405,19 @@ export function Generator() {
                   />
                 </div>
 
+                {/* AI Theme card */}
+                {object?.theme && <ThemeCard theme={object.theme} onApply={handleApplyTheme} onReset={reset} />}
+
                 {/* Stack list */}
                 <ol className="mt-10 grid gap-3">
                   {recommendation.stack.map((lib, i) => (
                     <li key={lib.id} className="result-card">
-                      <StackCard library={lib} index={i} />
+                      <StackCard
+                        library={lib}
+                        index={i}
+                        aiReason={reasonMap[lib.id]}
+                        streaming={isLoading}
+                      />
                     </li>
                   ))}
                 </ol>
@@ -271,20 +426,61 @@ export function Generator() {
                   <div className="flex items-center gap-3">
                     <Cpu className="h-5 w-5 text-primary" />
                     <div>
-                      <div className="text-sm font-medium">Ready to scaffold</div>
+                      <div className="text-sm font-medium">
+                        {savedId ? "Saved" : "Ready to save"}
+                      </div>
                       <div className="text-xs text-muted-foreground">
-                        Export to a Next.js starter with this stack pre-wired.
+                        {savedId
+                          ? `Share at /s/${savedId}`
+                          : "Publish this stack to the public gallery."}
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      Copy spec
-                    </Button>
-                    <Button size="sm">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Generate in v0
-                    </Button>
+                    {savedId ? (
+                      <>
+                        <Button variant="outline" size="sm" onClick={handleCopyShare}>
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy link
+                        </Button>
+                        <a
+                          href={`/s/${savedId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex"
+                        >
+                          <Button size="sm">
+                            <Share2 className="h-3.5 w-3.5" />
+                            Open share
+                          </Button>
+                        </a>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const spec = buildSpec(recommendation, object)
+                            navigator.clipboard.writeText(spec)
+                            toast.success("Spec copied to clipboard")
+                          }}
+                          disabled={isLoading}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy spec
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSave}
+                          disabled={isLoading || isSaving || !object?.headline || !object?.theme}
+                          data-cursor="hover"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          {isSaving ? "Saving…" : "Save to gallery"}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </>
@@ -296,9 +492,149 @@ export function Generator() {
   )
 }
 
-function StackCard({ library, index }: { library: Recommendation["stack"][number]; index: number }) {
+function buildSpec(rec: Recommendation, ai: Partial<GenerateResponse> | undefined): string {
+  const lines = [
+    `# ${ai?.headline ?? rec.summary}`,
+    "",
+    ai?.rationale ? `> ${ai.rationale}` : "",
+    "",
+    "## Stack",
+    ...rec.stack.map(
+      (s, i) =>
+        `${i + 1}. **${s.name}** (${s.category}) — ${s.tagline}${
+          ai?.reasons?.find((r) => r?.libraryId === s.id)?.why
+            ? `\n    - Why: ${ai?.reasons?.find((r) => r?.libraryId === s.id)?.why}`
+            : ""
+        }`
+    ),
+    "",
+    "## Theme",
+    ai?.theme ? "```css\n" + themeToCss(ai.theme as GenerateTheme) + "\n```" : "",
+  ]
+  return lines.filter(Boolean).join("\n")
+}
+
+function themeToCss(t: GenerateTheme): string {
+  return `:root {
+  --background: ${t.background};
+  --foreground: ${t.foreground};
+  --primary: ${t.primary};
+  --accent: ${t.accent};
+  --radius: ${t.radius};
+  --font-display: "${t.displayFont}";
+  --font-body: "${t.bodyFont}";
+}`
+}
+
+function ThemeCard({
+  theme,
+  onApply,
+  onReset,
+}: {
+  theme: Partial<GenerateTheme>
+  onApply: () => void
+  onReset: () => void
+}) {
+  const swatches: Array<{ key: keyof GenerateTheme; label: string }> = [
+    { key: "background", label: "BG" },
+    { key: "foreground", label: "FG" },
+    { key: "primary", label: "Primary" },
+    { key: "accent", label: "Accent" },
+    { key: "card", label: "Card" },
+    { key: "border", label: "Border" },
+  ]
+
+  const ready = !!(theme.background && theme.foreground && theme.primary && theme.accent)
+
   return (
-    <Card className="group relative overflow-hidden p-5 transition-colors hover:border-primary/40">
+    <Card className="result-summary mt-6 overflow-hidden border-primary/20 bg-card">
+      <div className="flex items-center justify-between border-b border-border px-5 py-3">
+        <div className="flex items-center gap-2">
+          <Palette className="h-4 w-4 text-primary" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            Generated theme
+          </span>
+          {theme.name && (
+            <span className="font-display text-lg italic ml-1">— {theme.name}</span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="ghost" onClick={onReset} className="h-8">
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset
+          </Button>
+          <Button size="sm" onClick={onApply} disabled={!ready} className="h-8" data-cursor="hover">
+            <Palette className="h-3.5 w-3.5" />
+            Apply to page
+          </Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-6 gap-px bg-border">
+        {swatches.map((s) => {
+          const value = theme[s.key] as string | undefined
+          return (
+            <div key={s.key} className="bg-card p-3">
+              <div
+                className="h-12 w-full rounded-sm border border-border"
+                style={{ background: value ?? "transparent" }}
+              />
+              <div className="mt-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                {s.label}
+              </div>
+              <div className="font-mono text-[10px] tabular-nums truncate text-foreground/70">
+                {value ?? "…"}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {(theme.displayFont || theme.bodyFont || theme.motto) && (
+        <div className="grid grid-cols-3 gap-px bg-border">
+          <div className="bg-card p-4">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Display
+            </div>
+            <div className="mt-1 text-xl">{theme.displayFont ?? "…"}</div>
+          </div>
+          <div className="bg-card p-4">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Body
+            </div>
+            <div className="mt-1 text-xl">{theme.bodyFont ?? "…"}</div>
+          </div>
+          <div className="bg-card p-4">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Radius
+            </div>
+            <div className="mt-1 text-xl tabular-nums">{theme.radius ?? "…"}</div>
+          </div>
+        </div>
+      )}
+      {theme.motto && (
+        <div className="border-t border-border px-5 py-3 text-sm text-muted-foreground italic">
+          “{theme.motto}”
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function StackCard({
+  library,
+  index,
+  aiReason,
+  streaming,
+}: {
+  library: Recommendation["stack"][number]
+  index: number
+  aiReason?: string
+  streaming?: boolean
+}) {
+  return (
+    <Card
+      className="group relative overflow-hidden p-5 transition-colors hover:border-primary/40"
+      data-cursor="hover"
+    >
       <div className="flex items-start gap-5">
         <div className="font-mono text-xs text-muted-foreground tabular-nums w-6 pt-0.5">
           {String(index + 1).padStart(2, "0")}
@@ -306,7 +642,10 @@ function StackCard({ library, index }: { library: Recommendation["stack"][number
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h4 className="font-display text-2xl tracking-tight">{library.name}</h4>
-            <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-wider border-border">
+            <Badge
+              variant="outline"
+              className="font-mono text-[10px] uppercase tracking-wider border-border"
+            >
               {library.category}
             </Badge>
             {library.tier !== "free" && (
@@ -327,7 +666,19 @@ function StackCard({ library, index }: { library: Recommendation["stack"][number
           <p className="mt-1 text-sm text-muted-foreground">{library.tagline}</p>
           <p className="mt-3 text-sm leading-relaxed text-pretty">{library.description}</p>
 
-          {library.reasons.length > 0 && (
+          {aiReason ? (
+            <div className="mt-4 rounded-md border-l-2 border-primary bg-primary/5 px-3 py-2 text-sm leading-relaxed">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-primary mr-2">
+                Why
+              </span>
+              {aiReason}
+            </div>
+          ) : streaming ? (
+            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+              <span className="font-mono uppercase tracking-wider">awaiting rationale</span>
+            </div>
+          ) : library.reasons.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-1.5">
               {library.reasons.slice(0, 4).map((r, i) => (
                 <span
@@ -339,7 +690,7 @@ function StackCard({ library, index }: { library: Recommendation["stack"][number
                 </span>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="flex flex-col items-end gap-2">
@@ -361,7 +712,6 @@ function StackCard({ library, index }: { library: Recommendation["stack"][number
         </div>
       </div>
 
-      {/* Subtle scoreline */}
       <div className="pointer-events-none absolute left-0 top-0 h-px w-full bg-gradient-to-r from-transparent via-primary/0 to-transparent group-hover:via-primary/40 transition-colors" />
     </Card>
   )
