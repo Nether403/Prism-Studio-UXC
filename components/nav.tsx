@@ -42,12 +42,15 @@ export function Nav() {
           <a href="#libraries" className="hover:text-foreground transition" data-cursor="hover">
             Libraries
           </a>
-          <a href="#integrations" className="hover:text-foreground transition" data-cursor="hover">
-            Integrations
-          </a>
+          <Link href="/recipes" className="hover:text-foreground transition" data-cursor="hover">
+            Recipes
+          </Link>
           <Link href="/gallery" className="hover:text-foreground transition" data-cursor="hover">
             Gallery
           </Link>
+          <a href="#integrations" className="hover:text-foreground transition" data-cursor="hover">
+            Integrations
+          </a>
         </nav>
 
         <div className="flex items-center gap-2">

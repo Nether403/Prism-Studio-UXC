@@ -25,18 +25,23 @@ export function Footer() {
             </div>
             <ul className="mt-4 space-y-2 text-sm">
               <li>
-                <a href="#generator" className="hover:text-primary transition">
+                <a href="/#generator" className="hover:text-primary transition">
                   Generator
                 </a>
               </li>
               <li>
-                <a href="#libraries" className="hover:text-primary transition">
-                  Libraries
+                <a href="/recipes" className="hover:text-primary transition">
+                  Recipes
                 </a>
               </li>
               <li>
-                <a href="#integrations" className="hover:text-primary transition">
-                  Integrations
+                <a href="/gallery" className="hover:text-primary transition">
+                  Gallery
+                </a>
+              </li>
+              <li>
+                <a href="/#libraries" className="hover:text-primary transition">
+                  Libraries
                 </a>
               </li>
             </ul>

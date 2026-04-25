@@ -14,16 +14,17 @@ import {
 } from "@/components/ui/command"
 import { usePrismTheme } from "@/components/prism-theme-provider"
 import { THEME_PRESETS } from "@/lib/themes"
+import { RECIPES } from "@/lib/recipes"
 import {
   Wand2,
   Palette,
   Layers,
   Image as ImageIcon,
   Github,
-  ExternalLink,
   RotateCcw,
   Sparkles,
   Shuffle,
+  BookOpen,
 } from "lucide-react"
 
 type CommandPaletteProps = {
@@ -139,6 +140,32 @@ export function CommandPalette({ onTriggerGenerate }: CommandPaletteProps) {
             <ImageIcon className="h-4 w-4" />
             Open public gallery
           </CommandItem>
+          <CommandItem onSelect={run(() => router.push("/recipes"))}>
+            <BookOpen className="h-4 w-4" />
+            Browse recipes
+          </CommandItem>
+        </CommandGroup>
+
+        <CommandSeparator />
+
+        <CommandGroup heading="Recipes">
+          {RECIPES.map((r) => (
+            <CommandItem
+              key={r.slug}
+              onSelect={run(() => router.push(`/recipes/${r.slug}`))}
+            >
+              <span
+                className="inline-block h-3 w-3 rounded-sm border border-border"
+                style={{ background: r.theme.primary }}
+              />
+              <span
+                className="inline-block h-3 w-3 rounded-sm border border-border -ml-1.5"
+                style={{ background: r.theme.accent }}
+              />
+              <span className="ml-2">{r.title}</span>
+              <span className="ml-auto text-xs text-muted-foreground">{r.theme.name}</span>
+            </CommandItem>
+          ))}
         </CommandGroup>
 
         <CommandSeparator />
