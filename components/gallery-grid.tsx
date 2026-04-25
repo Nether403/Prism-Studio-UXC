@@ -45,7 +45,13 @@ function timeAgo(iso: string): string {
   return `${Math.round(diff / 86400)}d ago`
 }
 
-export function GalleryGrid({ stacks }: { stacks: GalleryItem[] }) {
+export function GalleryGrid({
+  stacks,
+  pulseId,
+}: {
+  stacks: GalleryItem[]
+  pulseId?: string | null
+}) {
   const root = useRef<HTMLDivElement>(null)
   const { setTheme } = usePrismTheme()
 
@@ -66,6 +72,21 @@ export function GalleryGrid({ stacks }: { stacks: GalleryItem[] }) {
     return () => ctx.revert()
   }, [stacks.length])
 
+  // Highlight just-arrived realtime cards.
+  useEffect(() => {
+    if (!pulseId || !root.current) return
+    const el = root.current.querySelector<HTMLElement>(`[data-card-id="${pulseId}"]`)
+    if (!el) return
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        { y: 16, opacity: 0, scale: 0.985 },
+        { y: 0, opacity: 1, scale: 1, duration: 0.7, ease: "power3.out" },
+      )
+    }, el)
+    return () => ctx.revert()
+  }, [pulseId])
+
   return (
     <div ref={root} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {stacks.map((s) => {
@@ -73,9 +94,23 @@ export function GalleryGrid({ stacks }: { stacks: GalleryItem[] }) {
         return (
           <Card
             key={s.id}
-            className="gallery-card group relative flex flex-col overflow-hidden p-0 transition-colors hover:border-primary/40"
+            data-card-id={s.id}
+            className={`gallery-card group relative flex flex-col overflow-hidden p-0 transition-colors hover:border-primary/40 ${
+              pulseId === s.id
+                ? "ring-2 ring-primary/60 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.45)]"
+                : ""
+            }`}
             data-cursor="hover"
           >
+            {pulseId === s.id && (
+              <div className="absolute right-3 top-3 z-30 inline-flex items-center gap-1.5 rounded-full bg-primary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary-foreground shadow-md">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inset-0 animate-ping rounded-full bg-primary-foreground opacity-70" />
+                  <span className="relative h-1.5 w-1.5 rounded-full bg-primary-foreground" />
+                </span>
+                New
+              </div>
+            )}
             {/* Theme preview strip — uses the ACTUAL saved theme tokens */}
             <div
               className="relative h-32 overflow-hidden border-b border-border"

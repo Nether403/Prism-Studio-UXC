@@ -17,8 +17,9 @@ import { Analytics } from "@vercel/analytics/next"
 import { LenisProvider } from "@/components/lenis-provider"
 import { PrismThemeProvider } from "@/components/prism-theme-provider"
 import { Cursor } from "@/components/cursor"
-import { SceneMount } from "@/components/scene-mount"
 import { Toaster } from "@/components/ui/sonner"
+import { SITE_URL, SITE } from "@/lib/site"
+import { JsonLd } from "@/components/json-ld"
 import "./globals.css"
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" })
@@ -57,12 +58,22 @@ const fontVariables = [
 ].join(" ")
 
 export const metadata: Metadata = {
-  title: "Prism — Visual Stack Generator",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE.fullName,
+    template: "%s · Prism",
+  },
   description:
     "Describe an idea. Prism composes a stack of best-in-class design libraries — Three.js, GSAP, Shadcn, Tailwind, Lenis, Next.js — tuned for visual impact.",
+  applicationName: SITE.name,
   generator: "v0.app",
+  alternates: {
+    canonical: "/",
+    types: { "application/rss+xml": [{ url: "/feed.xml", title: "Prism changelog" }] },
+  },
   keywords: [
     "design generator",
+    "stack generator",
     "Three.js",
     "GSAP",
     "Shadcn",
@@ -75,10 +86,19 @@ export const metadata: Metadata = {
     "AI design",
   ],
   openGraph: {
-    title: "Prism — Visual Stack Generator",
+    title: SITE.fullName,
     description:
       "Describe an idea. Prism composes a stack of best-in-class design libraries tuned for visual impact.",
     type: "website",
+    url: SITE_URL,
+    siteName: SITE.name,
+    locale: SITE.locale,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE.fullName,
+    description:
+      "Describe an idea. Prism composes a stack of best-in-class design libraries tuned for visual impact.",
   },
   icons: {
     icon: [
@@ -104,9 +124,31 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${fontVariables} bg-background`}>
       <body className="font-sans antialiased overflow-x-hidden">
+        <JsonLd
+          data={[
+            {
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: SITE.name,
+              url: SITE_URL,
+              description: SITE.shortDescription,
+              potentialAction: {
+                "@type": "SearchAction",
+                target: `${SITE_URL}/gallery?q={search_term_string}`,
+                "query-input": "required name=search_term_string",
+              },
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: SITE.name,
+              url: SITE_URL,
+              logo: `${SITE_URL}/icon.svg`,
+            },
+          ]}
+        />
         <PrismThemeProvider>
           <LenisProvider>
-            <SceneMount />
             <div className="relative z-10">{children}</div>
             <Cursor />
             <Toaster />
