@@ -5,6 +5,7 @@ import { Nav } from "@/components/nav"
 import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
 import { DashboardList } from "@/components/dashboard-list"
+import { ActivityFeed, type ActivityEvent } from "@/components/activity-feed"
 import type { Theme } from "@/lib/themes"
 
 export const metadata = {
@@ -46,17 +47,27 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .maybeSingle()
 
-  const { data: stacks } = await supabase
-    .from("stacks")
-    .select(
-      "id,title,headline,prompt,vibe,audience,published,parent_id,fork_count,likes,views,stack_ids,theme,impact_score,perf_budget,created_at,updated_at",
-    )
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false })
+  const [{ data: stacks }, { data: events }] = await Promise.all([
+    supabase
+      .from("stacks")
+      .select(
+        "id,title,headline,prompt,vibe,audience,published,parent_id,fork_count,likes,views,stack_ids,theme,impact_score,perf_budget,created_at,updated_at",
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("activity_events")
+      .select("id,type,created_at,stack_id,metadata,actor:profiles!activity_events_actor_id_fkey(username,display_name)")
+      .eq("target_user_id", user.id)
+      .neq("actor_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(15),
+  ])
 
   const rows: StackRow[] = (stacks ?? []) as StackRow[]
   const drafts = rows.filter((s) => !s.published)
   const published = rows.filter((s) => s.published)
+  const incoming = ((events ?? []) as unknown as ActivityEvent[]) ?? []
 
   return (
     <main className="relative">
@@ -113,8 +124,20 @@ export default async function DashboardPage() {
       </section>
 
       <section className="relative pb-24">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-6xl px-6 grid gap-10 lg:grid-cols-[1fr_320px]">
           <DashboardList rows={rows} />
+
+          <aside className="space-y-4">
+            <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+              <span className="text-primary">A</span>
+              <span className="h-px w-8 bg-border" />
+              <span>What others did</span>
+            </div>
+            <ActivityFeed
+              events={incoming}
+              emptyLabel="No likes or forks on your work yet. Publish something and share the link."
+            />
+          </aside>
         </div>
       </section>
 

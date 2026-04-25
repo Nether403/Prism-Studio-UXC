@@ -21,6 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const lib = LIBRARIES.find((l) => l.id === id)
   if (!lib) return { title: "Library not found · Prism" }
+  const ogUrl = `/api/og/library/${lib.id}`
   return {
     title: `${lib.name} — ${lib.tagline} · Prism`,
     description: lib.description,
@@ -28,6 +29,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       title: `${lib.name} on Prism`,
       description: lib.description,
       type: "article",
+      images: [{ url: ogUrl, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${lib.name} on Prism`,
+      description: lib.description,
+      images: [ogUrl],
     },
   }
 }

@@ -23,12 +23,22 @@ export async function generateMetadata({
   const { slug } = await params
   const recipe = getRecipe(slug)
   if (!recipe) return {}
+  const title = `${recipe.title} — Prism Recipe`
+  const ogUrl = `/api/og/recipe/${recipe.slug}`
   return {
-    title: `${recipe.title} — Prism Recipe`,
+    title,
     description: recipe.tagline,
     openGraph: {
-      title: `${recipe.title} — Prism Recipe`,
+      title,
       description: recipe.tagline,
+      type: "article",
+      images: [{ url: ogUrl, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: recipe.tagline,
+      images: [ogUrl],
     },
   }
 }

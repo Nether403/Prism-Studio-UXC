@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { Nav } from "@/components/nav"
 import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
+import { ActivityFeed, type ActivityEvent } from "@/components/activity-feed"
 import type { Theme } from "@/lib/themes"
 import { Heart, GitFork } from "lucide-react"
 
@@ -47,14 +48,23 @@ export default async function ProfilePage({
     .maybeSingle()
   if (!profile) notFound()
 
-  const { data: stacks } = await supabase
-    .from("stacks")
-    .select("id,title,headline,prompt,vibe,likes,fork_count,theme,stack_ids")
-    .eq("user_id", profile.id)
-    .eq("published", true)
-    .order("created_at", { ascending: false })
+  const [{ data: stacks }, { data: events }] = await Promise.all([
+    supabase
+      .from("stacks")
+      .select("id,title,headline,prompt,vibe,likes,fork_count,theme,stack_ids")
+      .eq("user_id", profile.id)
+      .eq("published", true)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("activity_events")
+      .select("id,type,created_at,stack_id,metadata,actor:profiles!activity_events_actor_id_fkey(username,display_name)")
+      .or(`actor_id.eq.${profile.id},target_user_id.eq.${profile.id}`)
+      .order("created_at", { ascending: false })
+      .limit(20),
+  ])
 
   const rows: Row[] = (stacks ?? []) as Row[]
+  const activity = ((events ?? []) as unknown as ActivityEvent[]) ?? []
 
   return (
     <main className="relative">
@@ -127,6 +137,18 @@ export default async function ProfilePage({
               ))}
             </ul>
           )}
+
+          <div className="mt-16">
+            <div className="mb-4 flex items-center gap-3 font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">
+              <span className="text-primary">A</span>
+              <span className="h-px w-8 bg-border" />
+              <span>Recent activity</span>
+            </div>
+            <ActivityFeed
+              events={activity}
+              emptyLabel="Nothing yet — once people interact with these stacks it&apos;ll show up here."
+            />
+          </div>
         </div>
       </section>
 

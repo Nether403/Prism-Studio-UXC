@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Heart, Palette, Copy, Check, GitFork } from "lucide-react"
+import { Heart, Palette, Copy, Check, GitFork, Code2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { toggleLike, forkStack } from "@/app/actions/stack"
@@ -27,6 +27,7 @@ export function ShareActions({
   const [likes, setLikes] = useState(initialLikes)
   const [liked, setLiked] = useState(initiallyLiked)
   const [copied, setCopied] = useState(false)
+  const [embedCopied, setEmbedCopied] = useState(false)
   const [pending, startTransition] = useTransition()
   const [forking, startFork] = useTransition()
 
@@ -70,6 +71,18 @@ export function ShareActions({
       setCopied(true)
       toast.success("Share link copied")
       setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  function handleCopyEmbed() {
+    const origin = typeof window !== "undefined" ? window.location.origin : ""
+    const snippet = `<iframe src="${origin}/s/${id}/embed" width="100%" height="540" style="border:0;border-radius:12px;overflow:hidden" loading="lazy" title="Prism stack ${id}"></iframe>`
+    navigator.clipboard.writeText(snippet).then(() => {
+      setEmbedCopied(true)
+      toast.success("Embed code copied", {
+        description: "Paste it into a blog post, README, or Notion page.",
+      })
+      setTimeout(() => setEmbedCopied(false), 1500)
     })
   }
 
@@ -128,6 +141,11 @@ export function ShareActions({
       <Button size="sm" variant="ghost" onClick={handleCopy} className="gap-2">
         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
         {copied ? "Copied" : "Copy link"}
+      </Button>
+
+      <Button size="sm" variant="ghost" onClick={handleCopyEmbed} className="gap-2">
+        {embedCopied ? <Check className="h-4 w-4" /> : <Code2 className="h-4 w-4" />}
+        {embedCopied ? "Copied" : "Embed"}
       </Button>
     </div>
   )
