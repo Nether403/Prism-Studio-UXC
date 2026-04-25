@@ -12,17 +12,16 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
-  Sparkles,
   Wand2,
   Lock,
   ExternalLink,
   Cpu,
-  Gauge,
   Palette,
   Save,
   RotateCcw,
   Share2,
   Copy,
+  Layers,
 } from "lucide-react"
 import {
   recommend,
@@ -33,6 +32,7 @@ import {
   type Vibe,
 } from "@/lib/recommend"
 import { generateResponseSchema, type GenerateResponse, type GenerateTheme } from "@/lib/generate-schema"
+import { LIBRARIES } from "@/lib/stack-data"
 import { usePrismTheme } from "@/components/prism-theme-provider"
 import { DEFAULT_THEME, type Theme } from "@/lib/themes"
 import { saveStack } from "@/app/actions/stack"
@@ -41,6 +41,8 @@ import { PreviewPane } from "@/components/preview-pane"
 import { LibraryDemo } from "@/components/library-demo"
 import { ExportActions } from "@/components/export-actions"
 import type { ExportInput } from "@/lib/exporters"
+import { RealMetrics } from "@/components/real-metrics"
+import { VariantPicker } from "@/components/variant-picker"
 
 const SUGGESTIONS = [
   "An immersive product launch site for a wireless audio brand with cinematic 3D and bold scroll-driven storytelling.",
@@ -79,6 +81,8 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null)
   const [savedId, setSavedId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  // Variant pick overrides the streaming response — applied wholesale.
+  const [manualResult, setManualResult] = useState<GenerateResponse | null>(null)
 
   const resultRef = useRef<HTMLDivElement>(null)
 
@@ -87,16 +91,68 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
     [prompt, vibe, audience, performance, includePaid]
   )
 
-  const { object, submit, isLoading, error, stop } = useObject<GenerateResponse>({
+  const {
+    object: streamObject,
+    submit,
+    isLoading,
+    error,
+    stop,
+  } = useObject<GenerateResponse>({
     api: "/api/generate",
     schema: generateResponseSchema,
   })
+
+  // Display either a picked variant or the live stream.
+  const object: Partial<GenerateResponse> | null | undefined =
+    manualResult ?? streamObject
 
   function handleGenerate() {
     const rec = recommend(input)
     setRecommendation(rec)
     setSavedId(null)
+    setManualResult(null)
     submit(input)
+  }
+
+  function handleVariantPick(v: {
+    stackIds: string[]
+    ai: GenerateResponse | null
+    impactScore: number
+  }) {
+    if (!v.ai) {
+      toast.error("This variant didn't generate cleanly — try Re-roll.")
+      return
+    }
+    // Build a recommendation around the variant's chosen library ids
+    const baseRec = recommend(input)
+    const stack = v.stackIds
+      .map((id) => baseRec.stack.find((s) => s.id === id) ?? null)
+      .filter((s): s is NonNullable<typeof s> => Boolean(s))
+    // If recommend didn't return some ids, pull them from LIBRARIES with score 0
+    const resolved = v.stackIds.map((id) => {
+      const found = stack.find((s) => s.id === id)
+      if (found) return found
+      const lib = LIBRARIES.find((l) => l.id === id)
+      return lib ? { ...lib, score: 0, reasons: ["selected variant"] } : null
+    }).filter((s): s is NonNullable<typeof s> => Boolean(s))
+
+    setRecommendation({
+      stack: resolved,
+      impactScore: v.impactScore,
+      perfBudget: baseRec.perfBudget,
+      summary: v.ai.headline ?? baseRec.summary,
+    })
+    setManualResult(v.ai)
+    setSavedId(null)
+
+    // Apply theme to the page so the variant takes hold visually
+    try {
+      const theme = aiThemeToTheme(v.ai.theme as GenerateTheme)
+      setTheme(theme)
+      toast.success(`Variant applied — "${theme.name}"`)
+    } catch {
+      toast.success("Variant applied")
+    }
   }
 
   // Initial deterministic recommendation so the page feels alive on load
@@ -387,7 +443,7 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
                 </div>
               </div>
 
-              <div className="p-3 border-t border-border flex gap-2">
+              <div className="p-3 border-t border-border flex flex-col gap-2 sm:flex-row">
                 <Button
                   onClick={handleGenerate}
                   disabled={isLoading || prompt.trim().length < 6}
@@ -407,12 +463,24 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
                     </>
                   )}
                 </Button>
-                {isLoading && (
+                {isLoading ? (
                   <Button variant="outline" onClick={() => stop()} size="lg" className="h-12">
                     Stop
                   </Button>
+                ) : (
+                  <VariantPicker
+                    prompt={prompt}
+                    vibe={vibe}
+                    audience={audience}
+                    includePaid={includePaid}
+                    onPick={handleVariantPick}
+                  />
                 )}
               </div>
+              <p className="px-5 pb-3 -mt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                <Layers className="inline h-3 w-3 mr-1 -mt-0.5" />
+                Variants compose three directions in parallel — performance, balanced, maximalist
+              </p>
               {error && (
                 <div className="px-5 pb-4 text-xs text-destructive">
                   {error instanceof Error ? error.message : "Generation failed."}
@@ -445,20 +513,12 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
                   )}
                 </div>
 
-                {/* Meters */}
-                <div className="result-summary mt-8 grid grid-cols-2 gap-4">
-                  <Meter
-                    icon={<Sparkles className="h-3.5 w-3.5" />}
-                    label="Visual impact"
-                    value={recommendation.impactScore}
-                    accent="primary"
-                  />
-                  <Meter
-                    icon={<Gauge className="h-3.5 w-3.5" />}
-                    label="Performance load"
-                    value={recommendation.perfBudget}
-                    accent="accent"
-                    invert
+                {/* Real metrics — visual impact, real bundle, WCAG contrast */}
+                <div className="result-summary mt-8">
+                  <RealMetrics
+                    impactScore={recommendation.impactScore}
+                    stackIds={recommendation.stack.map((s) => s.id)}
+                    theme={previewTheme}
                   />
                 </div>
 
@@ -812,42 +872,6 @@ function StackCard({
 
       <div className="pointer-events-none absolute left-0 top-0 h-px w-full bg-gradient-to-r from-transparent via-primary/0 to-transparent group-hover:via-primary/40 transition-colors" />
     </Card>
-  )
-}
-
-function Meter({
-  label,
-  value,
-  icon,
-  accent,
-  invert,
-}: {
-  label: string
-  value: number
-  icon: React.ReactNode
-  accent: "primary" | "accent"
-  invert?: boolean
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card/60 p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          {icon}
-          {label}
-        </div>
-        <div className="font-mono text-sm tabular-nums">{value}</div>
-      </div>
-      <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-secondary">
-        <div
-          className={cn(
-            "meter-bar h-full rounded-full",
-            accent === "primary" ? "bg-primary" : "bg-accent",
-            invert && value > 65 && "bg-destructive"
-          )}
-          style={{ width: `${value}%` }}
-        />
-      </div>
-    </div>
   )
 }
 

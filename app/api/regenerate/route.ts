@@ -14,6 +14,8 @@ const inputSchema = z.object({
   includePaid: z.boolean(),
   /** Optional override — if provided, use these library ids instead of the recommended ones. */
   stackIds: z.array(z.string()).optional(),
+  /** Free-form natural-language nudge: "make it more brutalist", "lighter palette", etc. */
+  constraint: z.string().max(280).optional(),
 })
 
 export async function POST(req: Request) {
@@ -56,6 +58,8 @@ RULES:
 - Avoid purple/violet unless the brief explicitly calls for it.
 - Reasons should be sharp, not generic. Connect each library to a specific moment in the user's brief.`
 
+  const constraint = parsed.data.constraint?.trim()
+
   const userPrompt = `BRIEF:
 """
 ${input.prompt}
@@ -65,11 +69,17 @@ VIBE: ${input.vibe}
 AUDIENCE: ${input.audience}
 PERFORMANCE BUDGET: ${input.performance}
 INCLUDE PAID/AUTH-REQUIRED: ${input.includePaid}
-
+${
+  constraint
+    ? `\nADDITIONAL DIRECTION (override defaults to honor this):\n"""\n${constraint}\n"""\n`
+    : ""
+}
 STACK (one reason per library, in this order, using the given id):
 ${stackList}
 
-Produce headline, rationale, per-library reasons, and a custom theme.`
+Produce headline, rationale, per-library reasons, and a custom theme${
+    constraint ? " that honors the additional direction above" : ""
+  }.`
 
   try {
     const { object } = await generateObject({

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Save, RefreshCw, Trash2, Eye } from "lucide-react"
+import { ArrowRight, Save, RefreshCw, Trash2, Eye, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,6 +18,7 @@ import { type Theme } from "@/lib/themes"
 import { PreviewPane } from "@/components/preview-pane"
 import { updateStack, deleteStack, setPublished } from "@/app/actions/stack"
 import { ExportActions } from "@/components/export-actions"
+import { RealMetrics } from "@/components/real-metrics"
 
 type Row = {
   id: string
@@ -57,6 +58,7 @@ export function EditWorkbench({ row }: { row: Row }) {
   const [rationale, setRationale] = useState(row.rationale ?? "")
   const [theme, setTheme] = useState<Theme>(row.theme)
   const [stackIds, setStackIds] = useState<string[]>(row.stack_ids ?? [])
+  const [constraint, setConstraint] = useState("")
 
   // Recompute scores from current stackIds + input
   const recommendation = useMemo(() => {
@@ -95,6 +97,7 @@ export function EditWorkbench({ row }: { row: Row }) {
   }
 
   async function handleRegenerate() {
+    const trimmedConstraint = constraint.trim()
     startRegen(async () => {
       try {
         const res = await fetch("/api/regenerate", {
@@ -107,6 +110,7 @@ export function EditWorkbench({ row }: { row: Row }) {
             performance,
             includePaid,
             stackIds,
+            constraint: trimmedConstraint || undefined,
           }),
         })
         if (!res.ok) throw new Error("Generation failed")
@@ -118,7 +122,16 @@ export function EditWorkbench({ row }: { row: Row }) {
         if (data.headline) setHeadline(data.headline)
         if (data.rationale) setRationale(data.rationale)
         if (data.theme) setTheme((t) => ({ ...t, ...data.theme }))
-        toast.success("Regenerated", { description: "AI rewrote the copy and theme." })
+        toast.success(
+          trimmedConstraint ? "Re-rolled with your constraint" : "Regenerated",
+          {
+            description: trimmedConstraint
+              ? `Honored: "${trimmedConstraint}"`
+              : "AI rewrote the copy and theme.",
+          },
+        )
+        // Clear after successful re-roll so the next run starts fresh.
+        if (trimmedConstraint) setConstraint("")
       } catch (e) {
         toast.error("Regenerate failed", {
           description: e instanceof Error ? e.message : "Try again in a moment.",
@@ -215,17 +228,59 @@ export function EditWorkbench({ row }: { row: Row }) {
                 className="resize-none"
               />
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRegenerate}
-              disabled={regenPending}
-              className="gap-2"
-              data-cursor="hover"
-            >
-              {regenPending ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              Regenerate copy & theme with AI
-            </Button>
+            <div className="rounded-md border border-dashed border-border bg-card/40 p-3">
+              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                <Wand2 className="h-3 w-3" />
+                Re-roll with a constraint
+              </div>
+              <Textarea
+                value={constraint}
+                onChange={(e) => setConstraint(e.target.value)}
+                rows={2}
+                maxLength={280}
+                placeholder='e.g., "make it more brutalist", "lighter palette", "swap the headline for something snappier"'
+                className="mt-2 resize-none bg-background text-sm"
+              />
+              <div className="mt-2 flex flex-wrap gap-1">
+                {[
+                  "make it more brutalist",
+                  "lighter palette",
+                  "more cinematic",
+                  "calmer motion",
+                  "tighter copy",
+                ].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setConstraint(s)}
+                    className="rounded-full border border-border bg-card px-2.5 py-0.5 font-mono text-[10px] text-muted-foreground hover:border-primary/50 hover:text-foreground transition"
+                    data-cursor="hover"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
+                  {constraint.length}/280
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerate}
+                  disabled={regenPending}
+                  className="gap-2"
+                  data-cursor="hover"
+                >
+                  {regenPending ? (
+                    <Spinner className="h-3.5 w-3.5" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  {constraint.trim() ? "Re-roll with constraint" : "Regenerate copy & theme"}
+                </Button>
+              </div>
+            </div>
           </div>
         </Section>
 
@@ -323,6 +378,12 @@ export function EditWorkbench({ row }: { row: Row }) {
               </div>
             </div>
           </div>
+
+          <RealMetrics
+            impactScore={recommendation.impactScore}
+            stackIds={stackIds}
+            theme={theme}
+          />
 
           <PreviewPane
             theme={theme}
