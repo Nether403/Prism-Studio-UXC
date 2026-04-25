@@ -5,8 +5,10 @@ import { Nav } from "@/components/nav"
 import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
 import { ActivityFeed, type ActivityEvent } from "@/components/activity-feed"
+import { JsonLd } from "@/components/json-ld"
 import type { Theme } from "@/lib/themes"
 import { Heart, GitFork } from "lucide-react"
+import { SITE_URL } from "@/lib/site"
 
 export const revalidate = 60
 
@@ -16,9 +18,17 @@ export async function generateMetadata({
   params: Promise<{ username: string }>
 }) {
   const { username } = await params
+  const canonical = `/u/${username}`
   return {
     title: `@${username} · Prism`,
     description: `Stacks published by @${username}.`,
+    alternates: { canonical },
+    openGraph: {
+      title: `@${username} on Prism`,
+      description: `Design stacks published by @${username}.`,
+      type: "profile",
+      url: canonical,
+    },
   }
 }
 
@@ -68,6 +78,31 @@ export default async function ProfilePage({
 
   return (
     <main className="relative">
+      <JsonLd
+        data={[
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Profiles", item: `${SITE_URL}/gallery` },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: `@${profile.username}`,
+                item: `${SITE_URL}/u/${profile.username}`,
+              },
+            ],
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "Person",
+            name: profile.display_name || profile.username,
+            alternateName: `@${profile.username}`,
+            url: `${SITE_URL}/u/${profile.username}`,
+            description: profile.bio ?? undefined,
+          },
+        ]}
+      />
       <Nav />
 
       <section className="relative pt-32 pb-12 md:pt-40">

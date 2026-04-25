@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef } from "react"
+import Link from "next/link"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { ExternalLink, Sparkles, Gauge } from "lucide-react"
@@ -147,9 +148,13 @@ export function RecipeBody({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <h4 className="font-display text-xl md:text-2xl tracking-tight">
+                      <Link
+                        href={`/library/${lib.id}`}
+                        data-cursor="hover"
+                        className="font-display text-xl md:text-2xl tracking-tight underline-offset-4 hover:underline"
+                      >
                         {lib.name}
-                      </h4>
+                      </Link>
                       <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                         {lib.category}
                       </span>

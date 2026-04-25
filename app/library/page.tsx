@@ -10,6 +10,14 @@ export const metadata = {
   title: "Library — Prism Studio",
   description:
     "A curated index of every front-end library Prism knows about, with categories, tiers, and live micro-demos.",
+  alternates: { canonical: "/library" },
+  openGraph: {
+    title: "Prism Library",
+    description:
+      "Three.js, GSAP, Tailwind, Framer Motion, Lenis, shadcn/ui — every library Prism composes from, with live demos.",
+    type: "website",
+    url: "/library",
+  },
 }
 
 const CATEGORY_ORDER = [

@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next"
+import { createClient } from "@supabase/supabase-js"
 import { SITE_URL } from "@/lib/site"
 import { LIBRARIES } from "@/lib/stack-data"
 import { RECIPES } from "@/lib/recipes"
 import { CHANGELOG } from "@/lib/changelog"
-import { createClient } from "@/lib/supabase/server"
 
 export const revalidate = 3600
 
@@ -40,9 +40,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }))
 
   // Public stacks + profiles from Supabase. Best-effort — empty on failure.
+  // Cookieless anon client so this route can be statically generated.
   let dynamic: MetadataRoute.Sitemap = []
   try {
-    const supabase = await createClient()
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !anon) throw new Error("Supabase env not set")
+    const supabase = createClient(url, anon, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
     const [{ data: stacks }, { data: profiles }] = await Promise.all([
       supabase
         .from("stacks")
@@ -71,8 +77,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.5,
       })) ?? []),
     ]
-  } catch (e) {
-    console.error("[v0] sitemap dynamic fetch failed", e)
+  } catch {
+    // Sitemap is best-effort: a missing dynamic chunk is preferable to a failed build.
   }
 
   return [...staticEntries, ...libraryEntries, ...recipeEntries, ...changelogEntries, ...dynamic]

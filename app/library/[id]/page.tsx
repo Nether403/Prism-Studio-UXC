@@ -8,8 +8,10 @@ import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
 import { LibraryDemo } from "@/components/library-demo"
 import { Badge } from "@/components/ui/badge"
+import { JsonLd } from "@/components/json-ld"
 import { ExternalLink, Lock, Heart, GitFork } from "lucide-react"
 import type { Theme } from "@/lib/themes"
+import { SITE_URL } from "@/lib/site"
 
 export const revalidate = 300
 
@@ -22,13 +24,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const lib = LIBRARIES.find((l) => l.id === id)
   if (!lib) return { title: "Library not found · Prism" }
   const ogUrl = `/api/og/library/${lib.id}`
+  const canonical = `/library/${lib.id}`
   return {
     title: `${lib.name} — ${lib.tagline} · Prism`,
     description: lib.description,
+    alternates: { canonical },
     openGraph: {
       title: `${lib.name} on Prism`,
       description: lib.description,
       type: "article",
+      url: canonical,
       images: [{ url: ogUrl, width: 1200, height: 630 }],
     },
     twitter: {
@@ -94,6 +99,37 @@ export default async function LibraryDetail({
 
   return (
     <main className="relative">
+      <JsonLd
+        data={[
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Library", item: `${SITE_URL}/library` },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: lib.name,
+                item: `${SITE_URL}/library/${lib.id}`,
+              },
+            ],
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: lib.name,
+            description: lib.description,
+            applicationCategory: lib.category,
+            operatingSystem: "Web",
+            url: lib.url,
+            offers: {
+              "@type": "Offer",
+              price: lib.tier === "free" ? "0" : "0",
+              priceCurrency: "USD",
+            },
+          },
+        ]}
+      />
       <Nav />
 
       <section className="relative pt-32 pb-12 md:pt-40">

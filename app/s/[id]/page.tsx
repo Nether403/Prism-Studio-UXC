@@ -7,8 +7,10 @@ import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
 import { ShareActions } from "@/components/share-actions"
 import { Badge } from "@/components/ui/badge"
+import { JsonLd } from "@/components/json-ld"
 import { ExternalLink, Lock, Sparkles, Gauge } from "lucide-react"
 import type { Theme } from "@/lib/themes"
+import { SITE_URL } from "@/lib/site"
 
 export const revalidate = 60
 
@@ -42,13 +44,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!data) return { title: "Stack not found · Prism" }
   const title = `${data.headline} · Prism`
   const description = data.rationale ?? data.prompt?.slice(0, 160)
+  const canonical = `/s/${id}`
   return {
     title,
     description,
+    alternates: { canonical },
     openGraph: {
       title,
       description,
       type: "article",
+      url: canonical,
       images: [{ url: `/api/og/stack/${id}`, width: 1200, height: 630 }],
     },
     twitter: {
@@ -102,6 +107,35 @@ export default async function SharePage({
 
   return (
     <main className="relative">
+      <JsonLd
+        data={[
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Gallery", item: `${SITE_URL}/gallery` },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: stack.headline,
+                item: `${SITE_URL}/s/${stack.id}`,
+              },
+            ],
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: stack.headline,
+            description: stack.rationale ?? stack.prompt?.slice(0, 160),
+            datePublished: stack.created_at,
+            mainEntityOfPage: `${SITE_URL}/s/${stack.id}`,
+            image: `${SITE_URL}/api/og/stack/${stack.id}`,
+            author: { "@type": "Organization", name: "Prism" },
+            publisher: { "@type": "Organization", name: "Prism" },
+            keywords: libraries.map((l) => l.name).join(", "),
+          },
+        ]}
+      />
       <Nav />
 
       <section className="relative pt-32 pb-12 md:pt-40 md:pb-16">
@@ -265,7 +299,13 @@ export default async function SharePage({
                   </div>
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-display text-2xl tracking-tight">{lib.name}</h3>
+                      <Link
+                        href={`/library/${lib.id}`}
+                        className="font-display text-2xl tracking-tight underline-offset-4 hover:underline"
+                        data-cursor="hover"
+                      >
+                        {lib.name}
+                      </Link>
                       <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-wider">
                         {lib.category}
                       </Badge>

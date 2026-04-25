@@ -4,11 +4,13 @@ import { notFound } from "next/navigation"
 import { Nav } from "@/components/nav"
 import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
+import { JsonLd } from "@/components/json-ld"
 import { RECIPES, getRecipe } from "@/lib/recipes"
 import { recommend } from "@/lib/recommend"
 import { LIBRARIES as libraries } from "@/lib/stack-data"
 import { RecipeApply } from "@/components/recipe-apply"
 import { RecipeBody } from "@/components/recipe-body"
+import { SITE_URL } from "@/lib/site"
 import { ArrowLeft, ArrowUpRight } from "lucide-react"
 
 export function generateStaticParams() {
@@ -25,13 +27,16 @@ export async function generateMetadata({
   if (!recipe) return {}
   const title = `${recipe.title} — Prism Recipe`
   const ogUrl = `/api/og/recipe/${recipe.slug}`
+  const canonical = `/recipes/${recipe.slug}`
   return {
     title,
     description: recipe.tagline,
+    alternates: { canonical },
     openGraph: {
       title,
       description: recipe.tagline,
       type: "article",
+      url: canonical,
       images: [{ url: ogUrl, width: 1200, height: 630 }],
     },
     twitter: {
@@ -68,6 +73,33 @@ export default async function RecipePage({
 
   return (
     <main className="min-h-screen bg-background">
+      <JsonLd
+        data={[
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Recipes", item: `${SITE_URL}/recipes` },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: recipe.title,
+                item: `${SITE_URL}/recipes/${recipe.slug}`,
+              },
+            ],
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: recipe.title,
+            description: recipe.tagline,
+            mainEntityOfPage: `${SITE_URL}/recipes/${recipe.slug}`,
+            image: `${SITE_URL}/api/og/recipe/${recipe.slug}`,
+            author: { "@type": "Organization", name: "Prism" },
+            publisher: { "@type": "Organization", name: "Prism" },
+          },
+        ]}
+      />
       <CommandPalette />
       <Nav />
 
