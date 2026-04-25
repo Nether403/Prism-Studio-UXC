@@ -163,3 +163,44 @@
     animation: pulse-glow 3s ease-in-out infinite;
   }
 }
+
+/* Custom cursor (hidden on touch devices via JS) */
+@media (pointer: fine) {
+  body.has-custom-cursor,
+  body.has-custom-cursor * {
+    cursor: none !important;
+  }
+}
+
+.prism-cursor-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--primary);
+  transition: opacity 0.2s ease;
+  will-change: transform;
+}
+
+.prism-cursor-ring {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  border: 1px solid var(--foreground);
+  transition: width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease,
+    background-color 0.25s ease;
+  will-change: transform;
+}
+
+.prism-cursor-ring.is-hovering {
+  width: 56px;
+  height: 56px;
+  background: color-mix(in oklch, var(--primary) 20%, transparent);
+  border-color: var(--primary);
+}
+
+.prism-cursor-ring.is-pressed {
+  width: 24px;
+  height: 24px;
+}

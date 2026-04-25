@@ -358,7 +358,7 @@ export function Generator() {
               </div>
               {error && (
                 <div className="px-5 pb-4 text-xs text-destructive">
-                  {error.message ?? "Generation failed."}
+                  {error instanceof Error ? error.message : "Generation failed."}
                 </div>
               )}
             </Card>

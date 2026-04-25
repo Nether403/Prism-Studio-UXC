@@ -73,6 +73,7 @@ export function LibraryGrid() {
               href={lib.url}
               target="_blank"
               rel="noreferrer"
+              data-cursor="hover"
               className="lib-row group relative grid grid-cols-12 items-center gap-4 border-b border-border py-5 md:py-7 transition-colors hover:bg-card/40"
             >
               <span className="col-span-1 font-mono text-xs text-muted-foreground tabular-nums">
