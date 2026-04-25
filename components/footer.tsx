@@ -40,8 +40,8 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/#libraries" className="hover:text-primary transition">
-                  Libraries
+                <a href="/library" className="hover:text-primary transition">
+                  Library
                 </a>
               </li>
             </ul>
@@ -81,18 +81,18 @@ export function Footer() {
             </div>
             <ul className="mt-4 space-y-2 text-sm">
               <li>
-                <a href="#" className="hover:text-primary transition">
+                <a href="/auth/login" className="hover:text-primary transition">
                   Sign in
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-primary transition">
-                  Pricing
+                <a href="/auth/sign-up" className="hover:text-primary transition">
+                  Sign up
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-primary transition">
-                  Changelog
+                <a href="/dashboard" className="hover:text-primary transition">
+                  My stacks
                 </a>
               </li>
             </ul>

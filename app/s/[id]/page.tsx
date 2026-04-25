@@ -40,9 +40,23 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     .eq("id", id)
     .maybeSingle()
   if (!data) return { title: "Stack not found · Prism" }
+  const title = `${data.headline} · Prism`
+  const description = data.rationale ?? data.prompt?.slice(0, 160)
   return {
-    title: `${data.headline} · Prism`,
-    description: data.rationale ?? data.prompt?.slice(0, 160),
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      images: [{ url: `/api/og/stack/${id}`, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [`/api/og/stack/${id}`],
+    },
   }
 }
 
@@ -70,6 +84,21 @@ export default async function SharePage({
     .filter((l): l is (typeof LIBRARIES)[number] => Boolean(l))
 
   const theme = stack.theme
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  let initiallyLiked = false
+  if (user) {
+    const { data: likeRow } = await supabase
+      .from("stack_likes")
+      .select("user_id")
+      .eq("stack_id", stack.id)
+      .eq("user_id", user.id)
+      .maybeSingle()
+    initiallyLiked = !!likeRow
+  }
 
   return (
     <main className="relative">
@@ -115,8 +144,29 @@ export default async function SharePage({
           </div>
 
           <div className="mt-8">
-            <ShareActions id={stack.id} likes={stack.likes} theme={theme} />
+            <ShareActions
+              id={stack.id}
+              likes={stack.likes}
+              initiallyLiked={initiallyLiked}
+              theme={theme}
+              isAuthed={!!user}
+            />
           </div>
+
+          {user && (stack as unknown as { user_id?: string }).user_id === user.id && (
+            <div className="mt-6 flex items-center gap-3 rounded-md border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-sm">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-primary">
+                You own this
+              </span>
+              <Link
+                href={`/dashboard/edit/${stack.id}`}
+                className="ml-auto text-primary underline-offset-4 hover:underline"
+                data-cursor="hover"
+              >
+                Edit →
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

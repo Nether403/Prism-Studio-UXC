@@ -69,7 +69,7 @@ function aiThemeToTheme(t: GenerateTheme): Theme {
   }
 }
 
-export function Generator() {
+export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
   const { setTheme, reset } = usePrismTheme()
   const [prompt, setPrompt] = useState(SUGGESTIONS[0])
   const [vibe, setVibe] = useState<Vibe>("editorial")
@@ -177,20 +177,33 @@ export function Generator() {
       rationale: object.rationale ?? "",
       stackIds: recommendation.stack.map((s) => s.id),
       reasons,
-      theme: object.theme,
+      theme: object.theme as Record<string, unknown>,
       impactScore: recommendation.impactScore,
       perfBudget: recommendation.perfBudget,
+      // Authed users save as private drafts they can publish from /dashboard
+      asDraft: isAuthed,
+      title: object.headline,
     })
     setIsSaving(false)
     if ("id" in res) {
       setSavedId(res.id)
-      toast.success("Saved to gallery", {
-        description: "Anyone with the link can view this stack.",
-        action: {
-          label: "Open",
-          onClick: () => window.open(`/s/${res.id}`, "_blank"),
-        },
-      })
+      if (res.owned) {
+        toast.success("Saved to your drafts", {
+          description: "Open it from your dashboard to publish or edit.",
+          action: {
+            label: "Dashboard",
+            onClick: () => window.open(`/dashboard`, "_blank"),
+          },
+        })
+      } else {
+        toast.success("Saved to gallery", {
+          description: "Anyone with the link can view this stack.",
+          action: {
+            label: "Open",
+            onClick: () => window.open(`/s/${res.id}`, "_blank"),
+          },
+        })
+      }
     } else {
       toast.error("Could not save", { description: res.error })
     }
