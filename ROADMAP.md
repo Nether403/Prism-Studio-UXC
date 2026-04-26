@@ -4,7 +4,7 @@ A living document of what's shipped and what's planned next for
 Prism Studio. Reorder, edit, or strike through items freely as
 priorities shift.
 
-> Last updated: April 2026
+> Last updated: April 2026 (Phase 4 v1 + Phase 3 lineage breadcrumb)
 
 ---
 
@@ -48,7 +48,7 @@ inspiration loop feels complete."
       inspiration row pointing back to the parent capture.
 - [ ] Eval coverage: variant diversity score (palette delta, font delta,
       stack-id Jaccard distance) added to `scripts/evals/`.
-- [ ] Surface a "variant of …" breadcrumb on `/s/[id]` when the showing
+- [x] Surface a "variant of …" breadcrumb on `/s/[id]` when the showing
       stack's inspiration has a `parent_inspiration_id`, with a link to
       the source.
 - [ ] Render lineage trees on `/dashboard` — group variants under their
@@ -56,13 +56,16 @@ inspiration loop feels complete."
 
 ### Phase 4 — Public inspiration gallery
 
-- [ ] New route `/inspirations` — public grid of `is_public = true`
-      inspirations, sortable by recency / popularity.
-- [ ] Each card links to the producing stack's share page.
-- [ ] Filter chips: source type (URL / image / OG / paste) +
-      dominant hue.
-- [ ] Realtime-subscribed: new public inspirations animate in.
-- [ ] Add "Featured" boolean column + admin moderation queue.
+- [x] New route `/inspirations` — public grid of `is_public = true`
+      inspirations, sortable by recency.
+- [x] Each card links to the producing stack's share page.
+- [x] Filter chips: source type (URL / image / OG / paste).
+- [x] Realtime-subscribed: new public inspirations animate in
+      (`alter publication supabase_realtime add table public.inspirations`,
+      migration `006_inspirations_realtime.sql`).
+- [ ] Sort by popularity (likes-on-linked-stack + cache-hit count).
+- [ ] Dominant-hue filter chip (cluster on `signature.palette[*].hex`).
+- [ ] "Featured" boolean column + admin moderation queue.
 
 ### Phase 5 — Cross-user cache hits
 
@@ -156,6 +159,15 @@ Things we'd love to try but haven't committed to.
 
 ## Done (recent)
 
+- 2026-04 — Phase 4 v1 — public inspirations gallery at `/inspirations`.
+  Realtime feed of `is_public = true` rows with tabs (newest / with-stack
+  / captures-only) and source-type filter chips; cards deep-link to the
+  generated stack when one exists. Migration `006` adds
+  `public.inspirations` to the `supabase_realtime` publication so
+  inserts stream live to subscribed clients. Closes Phase 3 with the
+  "variant of …" lineage breadcrumb on `/s/[id]`, walking
+  `parent_inspiration_id → generated_stack_id` to link a variant back
+  to its source stack.
 - 2026-04 — Phase 3 v1 — variants from inspirations. `/api/variants`
   now accepts `inspirationId` and seeds every variant from the stored
   signature; `<MoreLikeThis>` renders an owner-only 3-card strip on

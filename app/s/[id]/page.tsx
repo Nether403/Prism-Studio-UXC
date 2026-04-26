@@ -111,28 +111,52 @@ export default async function SharePage({
   // matches this stack. RLS ensures only public rows are visible to
   // non-owners — when the row is private, viewers other than the owner get
   // null back and the section silently disappears.
+  //
+  // Lineage chain: if this inspiration was forked from another inspiration
+  // (parent_inspiration_id is set), pull the parent's generated stack so we
+  // can render a "Variant of {parent}" breadcrumb at the top of the page.
+  // RLS still applies on the embedded parent_stack — if the parent stack is
+  // unpublished and the viewer isn't its owner, we get null and the
+  // breadcrumb silently hides.
   const { data: inspirationRow } = await supabase
     .from("inspirations")
-    .select("id, source_type, source_ref, screenshot_url, signature, is_public, owner_id, created_at")
+    .select(
+      `id, source_type, source_ref, screenshot_url, signature, is_public, owner_id, created_at,
+       parent_inspiration_id,
+       parent_inspiration:parent_inspiration_id (
+         generated_stack_id,
+         parent_stack:generated_stack_id ( id, headline, title )
+       )`,
+    )
     .eq("generated_stack_id", stack.id)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
 
-  const inspiration = inspirationRow as
-    | {
-        id: string
-        source_type: SourceType
-        source_ref: string
-        screenshot_url: string | null
-        signature: Signature | null
-        is_public: boolean
-        owner_id: string | null
-        created_at: string
-      }
-    | null
+  type InspirationWithLineage = {
+    id: string
+    source_type: SourceType
+    source_ref: string
+    screenshot_url: string | null
+    signature: Signature | null
+    is_public: boolean
+    owner_id: string | null
+    created_at: string
+    parent_inspiration_id: string | null
+    parent_inspiration: {
+      generated_stack_id: string | null
+      parent_stack: { id: string; headline: string; title: string | null } | null
+    } | null
+  }
+
+  const inspiration = inspirationRow as InspirationWithLineage | null
 
   const isInspirationOwner = Boolean(user && inspiration && user.id === inspiration.owner_id)
+
+  // Walk the embedded chain. PostgREST hands back `parent_inspiration` and
+  // its nested `parent_stack` as objects (cardinality = many-to-one), so
+  // either link can be missing independently — guard for both.
+  const lineage = inspiration?.parent_inspiration?.parent_stack ?? null
 
   return (
     <main className="relative">
@@ -180,6 +204,21 @@ export default async function SharePage({
             <span>·</span>
             <span>{stack.audience}</span>
           </div>
+
+          {lineage && (
+            <Link
+              href={`/s/${lineage.id}`}
+              className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.2em] text-primary transition hover:border-primary hover:bg-primary/10"
+              data-cursor="hover"
+              aria-label={`Variant of ${lineage.title || lineage.headline}`}
+            >
+              <Sparkles className="h-3 w-3" aria-hidden />
+              <span className="text-muted-foreground">Variant of</span>
+              <span className="text-foreground">
+                {lineage.title || lineage.headline}
+              </span>
+            </Link>
+          )}
 
           <h1 className="mt-5 font-display text-5xl md:text-7xl tracking-[-0.04em] leading-[0.95] text-balance">
             {stack.headline}
