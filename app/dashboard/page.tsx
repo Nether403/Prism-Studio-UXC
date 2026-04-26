@@ -6,6 +6,7 @@ import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
 import { DashboardList } from "@/components/dashboard-list"
 import { ActivityFeed, type ActivityEvent } from "@/components/activity-feed"
+import { ProvenanceStrip, type ProvenanceInspiration } from "@/components/provenance-thumb"
 import type { Theme } from "@/lib/themes"
 
 export const metadata = {
@@ -47,7 +48,7 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .maybeSingle()
 
-  const [{ data: stacks }, { data: events }] = await Promise.all([
+  const [{ data: stacks }, { data: events }, { data: inspirations }] = await Promise.all([
     supabase
       .from("stacks")
       .select(
@@ -62,12 +63,26 @@ export default async function DashboardPage() {
       .neq("actor_id", user.id)
       .order("created_at", { ascending: false })
       .limit(15),
+    supabase
+      .from("inspirations")
+      .select(
+        "id,source_type,source_ref,screenshot_url,signature,generated_stack_id,is_public,created_at",
+      )
+      .eq("owner_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(8),
   ])
 
   const rows: StackRow[] = (stacks ?? []) as StackRow[]
   const drafts = rows.filter((s) => !s.published)
   const published = rows.filter((s) => s.published)
   const incoming = ((events ?? []) as unknown as ActivityEvent[]) ?? []
+
+  // Provenance strip data + a quick lookup of (stack_id → title/headline) so
+  // each linked thumb can show the producing stack's name without an N+1.
+  const inspirationRows = (inspirations ?? []) as ProvenanceInspiration[]
+  const stacksById: Record<string, { title: string | null; headline: string }> = {}
+  for (const s of rows) stacksById[s.id] = { title: s.title, headline: s.headline }
 
   return (
     <main className="relative">
@@ -122,6 +137,14 @@ export default async function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {inspirationRows.length > 0 && (
+        <section className="relative pb-12">
+          <div className="mx-auto max-w-6xl px-6">
+            <ProvenanceStrip inspirations={inspirationRows} stacksById={stacksById} />
+          </div>
+        </section>
+      )}
 
       <section className="relative pb-24">
         <div className="mx-auto max-w-6xl px-6 grid gap-10 lg:grid-cols-[1fr_320px]">
