@@ -17,6 +17,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowUpRight, Globe, ImageIcon, Lock, ScrollText } from "lucide-react"
 import type { Signature, SourceType } from "@/lib/signature"
+import { InspirationPrivacyToggle } from "@/components/inspiration-privacy-toggle"
 
 export type ProvenanceInspiration = {
   id: string
@@ -37,9 +38,20 @@ export type ProvenanceStripProps = {
    * avoids an N+1 lookup here.
    */
   stacksById: Record<string, { title: string | null; headline: string }>
+  /**
+   * When true, each thumb shows a privacy toggle that flips
+   * inspirations.is_public. Default false. The dashboard sets this to true
+   * because the strip is owner-scoped (RLS already enforces ownership for
+   * the underlying server action — this prop is purely a UI gate).
+   */
+  editable?: boolean
 }
 
-export function ProvenanceStrip({ inspirations, stacksById }: ProvenanceStripProps) {
+export function ProvenanceStrip({
+  inspirations,
+  stacksById,
+  editable = false,
+}: ProvenanceStripProps) {
   if (inspirations.length === 0) return null
 
   return (
@@ -70,6 +82,7 @@ export function ProvenanceStrip({ inspirations, stacksById }: ProvenanceStripPro
                 linkedStack={
                   insp.generated_stack_id ? stacksById[insp.generated_stack_id] ?? null : null
                 }
+                editable={editable}
               />
             </li>
           ))}
@@ -82,21 +95,28 @@ export function ProvenanceStrip({ inspirations, stacksById }: ProvenanceStripPro
 type ProvenanceThumbProps = {
   inspiration: ProvenanceInspiration
   linkedStack: { title: string | null; headline: string } | null
+  /** Render an interactive privacy toggle when the viewer owns this row. */
+  editable?: boolean
 }
 
-export function ProvenanceThumb({ inspiration, linkedStack }: ProvenanceThumbProps) {
-  const { source_type, source_ref, screenshot_url, signature, generated_stack_id, is_public } =
+export function ProvenanceThumb({
+  inspiration,
+  linkedStack,
+  editable = false,
+}: ProvenanceThumbProps) {
+  const { id, source_type, source_ref, screenshot_url, signature, generated_stack_id, is_public } =
     inspiration
   const SourceIcon = SOURCE_ICONS[source_type]
 
   // The destination depends on whether the inspiration produced a stack.
   // Linked → deep-link to the share page. Pending → resume in the originating
-  // studio so the owner can re-roll it without re-uploading.
+  // studio so the owner can re-roll it without re-uploading. URL/OG inputs
+  // pass the original source via ?url=… so RebuildStudio can prefill.
   const isLinked = Boolean(generated_stack_id && linkedStack)
   const href = isLinked
     ? `/s/${generated_stack_id}`
     : source_type === "url" || source_type === "og"
-      ? "/rebuild"
+      ? `/rebuild?url=${encodeURIComponent(source_ref)}`
       : "/from-image"
 
   const caption = isLinked
@@ -112,15 +132,30 @@ export function ProvenanceThumb({ inspiration, linkedStack }: ProvenanceThumbPro
   // Palette gradient fallback when the screenshot is missing (e.g. paste).
   const swatchHexes = (signature?.palette ?? []).map((s) => s.hex)
 
+  // ---------------------------------------------------------------------
+  // Stretched-link pattern. We can't put an interactive <button> inside an
+  // <a>, so instead the card is a relative div containing:
+  //   1. an absolute <Link> at z-10 that covers the whole card (the click
+  //      target),
+  //   2. visual content rendered normally beneath it,
+  //   3. interactive overlays (privacy toggle) at z-20 that sit above the
+  //      stretched link and capture their own clicks.
+  // ---------------------------------------------------------------------
   return (
-    <Link
-      href={href}
-      data-cursor="hover"
-      className={`group relative block w-[220px] overflow-hidden rounded-lg border bg-card/40 transition hover:border-foreground/30 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+    <div
+      className={`group relative block w-[220px] overflow-hidden rounded-lg border bg-card/40 transition hover:border-foreground/30 hover:bg-card ${
         isLinked ? "border-border" : "border-dashed border-border"
       }`}
-      aria-label={`${SOURCE_LABELS[source_type]}: ${caption}. ${hint}.`}
     >
+      <Link
+        href={href}
+        data-cursor="hover"
+        aria-label={`${SOURCE_LABELS[source_type]}: ${caption}. ${hint}.`}
+        className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <span className="sr-only">{caption}</span>
+      </Link>
+
       <div
         className="relative aspect-[5/4] w-full bg-secondary"
         style={
@@ -143,15 +178,27 @@ export function ProvenanceThumb({ inspiration, linkedStack }: ProvenanceThumbPro
           <SourceIcon className="h-2.5 w-2.5" aria-hidden />
           {SOURCE_LABELS[source_type]}
         </span>
-        {!is_public && (
-          <span
-            className="absolute right-2 top-2 inline-flex items-center gap-0.5 rounded-full bg-background/85 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground backdrop-blur"
-            title="Private to you"
-            aria-label="Private to you"
-          >
-            <Lock className="h-2.5 w-2.5" aria-hidden />
-          </span>
+
+        {/*
+          Top-right slot: editable mode renders the live privacy toggle;
+          read-only mode falls back to a static lock badge when the row is
+          private (and renders nothing when it's public — the absence of a
+          chip is the "public" state in that mode).
+        */}
+        {editable ? (
+          <InspirationPrivacyToggle inspirationId={id} initialPublic={is_public} />
+        ) : (
+          !is_public && (
+            <span
+              className="absolute right-2 top-2 inline-flex items-center gap-0.5 rounded-full bg-background/85 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground backdrop-blur"
+              title="Private to you"
+              aria-label="Private to you"
+            >
+              <Lock className="h-2.5 w-2.5" aria-hidden />
+            </span>
+          )
         )}
+
         {!isLinked && (
           <span className="absolute bottom-2 right-2 rounded-full bg-background/85 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-primary backdrop-blur">
             Pending
@@ -173,7 +220,7 @@ export function ProvenanceThumb({ inspiration, linkedStack }: ProvenanceThumbPro
           aria-hidden
         />
       </div>
-    </Link>
+    </div>
   )
 }
 

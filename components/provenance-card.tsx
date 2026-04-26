@@ -43,8 +43,12 @@ export function ProvenanceCard({ inspiration, isOwner }: ProvenanceCardProps) {
   const swatches = signature?.palette ?? []
 
   // Studio CTA: the page that would let the owner re-roll this exact
-  // inspiration. URL-based inputs map to /rebuild; image/paste to /from-image.
-  const studioHref = (source_type === "url" || source_type === "og") ? "/rebuild" : "/from-image"
+  // inspiration. URL-based inputs map to /rebuild?url=…; image/paste to
+  // /from-image (which doesn't yet support a prefill — re-uploading is
+  // unavoidable since the source is the user's own file).
+  const studioHref = (source_type === "url" || source_type === "og")
+    ? `/rebuild?url=${encodeURIComponent(source_ref)}`
+    : "/from-image"
   const studioLabel = (source_type === "url" || source_type === "og") ? "Re-rebuild" : "Re-extract"
 
   return (

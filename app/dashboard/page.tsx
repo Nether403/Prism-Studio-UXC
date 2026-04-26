@@ -141,7 +141,7 @@ export default async function DashboardPage() {
       {inspirationRows.length > 0 && (
         <section className="relative pb-12">
           <div className="mx-auto max-w-6xl px-6">
-            <ProvenanceStrip inspirations={inspirationRows} stacksById={stacksById} />
+            <ProvenanceStrip inspirations={inspirationRows} stacksById={stacksById} editable />
           </div>
         </section>
       )}
