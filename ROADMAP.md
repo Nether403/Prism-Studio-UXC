@@ -4,7 +4,7 @@ A living document of what's shipped and what's planned next for
 Prism Studio. Reorder, edit, or strike through items freely as
 priorities shift.
 
-> Last updated: April 2026
+> Last updated: April 2026 (Phase 5 v1 — cross-user cache hits)
 
 ---
 
@@ -48,7 +48,7 @@ inspiration loop feels complete."
       inspiration row pointing back to the parent capture.
 - [ ] Eval coverage: variant diversity score (palette delta, font delta,
       stack-id Jaccard distance) added to `scripts/evals/`.
-- [ ] Surface a "variant of …" breadcrumb on `/s/[id]` when the showing
+- [x] Surface a "variant of …" breadcrumb on `/s/[id]` when the showing
       stack's inspiration has a `parent_inspiration_id`, with a link to
       the source.
 - [ ] Render lineage trees on `/dashboard` — group variants under their
@@ -56,23 +56,33 @@ inspiration loop feels complete."
 
 ### Phase 4 — Public inspiration gallery
 
-- [ ] New route `/inspirations` — public grid of `is_public = true`
-      inspirations, sortable by recency / popularity.
-- [ ] Each card links to the producing stack's share page.
-- [ ] Filter chips: source type (URL / image / OG / paste) +
-      dominant hue.
-- [ ] Realtime-subscribed: new public inspirations animate in.
-- [ ] Add "Featured" boolean column + admin moderation queue.
+- [x] New route `/inspirations` — public grid of `is_public = true`
+      inspirations, sortable by recency.
+- [x] Each card links to the producing stack's share page.
+- [x] Filter chips: source type (URL / image / OG / paste).
+- [x] Realtime-subscribed: new public inspirations animate in
+      (`alter publication supabase_realtime add table public.inspirations`,
+      migration `006_inspirations_realtime.sql`).
+- [ ] Sort by popularity (likes-on-linked-stack + cache-hit count).
+- [ ] Dominant-hue filter chip (cluster on `signature.palette[*].hex`).
+- [ ] "Featured" boolean column + admin moderation queue.
 
 ### Phase 5 — Cross-user cache hits
 
-- [ ] When `/api/inspire` or `/api/rebuild` receives a source whose
-      `source_hash` already exists publicly, return the existing
-      signature + screenshot instead of re-fetching.
-- [ ] Owner sees a "Cached from public capture" chip and can opt to
-      force a fresh capture.
-- [ ] Counter on `inspirations` table: `cache_hit_count` to surface
-      popular sources for "Most rebuilt URLs" leaderboards.
+- [x] When `/api/inspire` or `/api/rebuild` receives a source whose
+      `source_hash` already exists publicly, clone the signature +
+      screenshot into an owned row and skip the capture/extract
+      pipeline (no Gemini call, no Blob upload, no quota spend on
+      `/api/rebuild`).
+- [x] Owner sees a "Cached from public capture" chip and can re-run
+      with `?force=1` via the "Capture fresh anyway" button.
+- [x] Counter on `inspirations`: `cache_hit_count` (migration
+      `007_cache_hits.sql`) bumped via `bump_cache_hit(uuid)`
+      SECURITY DEFINER RPC, with a `where is_public = true and
+      cache_hit_count > 0` partial index for leaderboard queries.
+- [ ] "Most rebuilt URLs" leaderboard surface (consumes the index
+      above; can ship as a slice on `/inspirations` or a tab on the
+      gallery).
 
 ### Quality of life
 
@@ -156,6 +166,25 @@ Things we'd love to try but haven't committed to.
 
 ## Done (recent)
 
+- 2026-04 — Phase 5 v1 — cross-user cache hits. `/api/inspire` and
+  `/api/rebuild` now consult a public `inspirations.source_hash`
+  lookup after the per-owner cache miss; on hit they clone the
+  signature/screenshot into an owned row with
+  `parent_inspiration_id` set and bump `cache_hit_count` on the
+  parent via the new `bump_cache_hit(uuid)` SECURITY DEFINER RPC
+  (migration `007`). The studios surface a "Cached from public
+  capture" chip plus a "Capture fresh anyway" button that re-submits
+  with `?force=1` to skip the lookup. Cached `/api/rebuild`
+  responses don't consume daily quota.
+- 2026-04 — Phase 4 v1 — public inspirations gallery at `/inspirations`.
+  Realtime feed of `is_public = true` rows with tabs (newest / with-stack
+  / captures-only) and source-type filter chips; cards deep-link to the
+  generated stack when one exists. Migration `006` adds
+  `public.inspirations` to the `supabase_realtime` publication so
+  inserts stream live to subscribed clients. Closes Phase 3 with the
+  "variant of …" lineage breadcrumb on `/s/[id]`, walking
+  `parent_inspiration_id → generated_stack_id` to link a variant back
+  to its source stack.
 - 2026-04 — Phase 3 v1 — variants from inspirations. `/api/variants`
   now accepts `inspirationId` and seeds every variant from the stored
   signature; `<MoreLikeThis>` renders an owner-only 3-card strip on
