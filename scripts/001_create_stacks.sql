@@ -1,4 +1,4 @@
--- Prism Studio: Gallery of generated stacks (anonymous shares)
+-- UXC: Gallery of generated stacks (anonymous shares)
 create table if not exists public.stacks (
   id text primary key,
   prompt text not null,

@@ -47,7 +47,7 @@ export async function scrapeContent(url: URL): Promise<ScrapeResult> {
       signal: ctrl.signal,
       redirect: "manual",
       headers: {
-        "user-agent": "PrismStudio/1.0 (+https://prism-studio.app)",
+        "user-agent": "UXC-Bot/1.0 (+https://uxc.me; site-rebuild)",
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9",
         "accept-language": "en-US,en;q=0.9",
       },

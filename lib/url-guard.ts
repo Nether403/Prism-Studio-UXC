@@ -200,7 +200,7 @@ export async function checkRobots(url: URL): Promise<{ allowed: boolean; reason?
   try {
     const res = await fetch(robotsUrl, {
       signal: ctrl.signal,
-      headers: { "user-agent": "PrismStudio/1.0 (+https://prism-studio.app)" },
+      headers: { "user-agent": "UXC-Bot/1.0 (+https://uxc.me; site-rebuild)" },
       redirect: "manual", // robots.txt redirects are usually noise
     })
     if (!res.ok) {
@@ -216,7 +216,7 @@ export async function checkRobots(url: URL): Promise<{ allowed: boolean; reason?
 
   // Minimal parser: collect rules under each User-agent group, then evaluate
   // the most specific match for "*". We don't try to be clever about
-  // user-agent precedence because we identify as PrismStudio and the public
+  // user-agent precedence because we identify as UXC-Bot and the public
   // contract is that we honor "*" only.
   const lines = body.split(/\r?\n/)
   const starRules: Array<{ kind: "allow" | "disallow"; pattern: string }> = []

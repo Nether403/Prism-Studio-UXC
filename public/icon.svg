@@ -1,25 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  UXC favicon mark.
+
+  A 32x32-friendly square version of the brand wordmark with the canonical
+  sunset gradient (warm yellow → orange → coral → magenta → deep purple)
+  rendered against the warm-tinted near-black canvas (#0c0807) that matches
+  --background. Lowercase "uxc" is drawn as text so the typography stays
+  crisp at any rasterized size.
+-->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <title>UXC</title>
   <defs>
-    <linearGradient id="uxc-grad" x1="0" y1="64" x2="64" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFC857"/>
-      <stop offset="0.22" stop-color="#FF8A3D"/>
-      <stop offset="0.55" stop-color="#FF3D6A"/>
-      <stop offset="0.78" stop-color="#B13D8A"/>
-      <stop offset="1" stop-color="#5B2A86"/>
+    <linearGradient id="uxc-sunset" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#FFC857"/>
+      <stop offset="22%"  stop-color="#FF8A3D"/>
+      <stop offset="55%"  stop-color="#FF3D6A"/>
+      <stop offset="78%"  stop-color="#B13D8A"/>
+      <stop offset="100%" stop-color="#5B2A86"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="#0A0608"/>
+  <rect width="64" height="64" rx="14" fill="#0c0807"/>
   <text
     x="50%"
-    y="52%"
+    y="55%"
     text-anchor="middle"
     dominant-baseline="middle"
-    font-family="'Bricolage Grotesque','Plus Jakarta Sans','Inter',system-ui,sans-serif"
+    font-family="'Bricolage Grotesque', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif"
     font-weight="800"
-    font-size="36"
-    letter-spacing="-1.6"
-    fill="url(#uxc-grad)"
+    font-size="34"
+    letter-spacing="-2"
+    fill="url(#uxc-sunset)"
   >uxc</text>
 </svg>

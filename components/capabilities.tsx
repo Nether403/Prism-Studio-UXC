@@ -95,7 +95,7 @@ export function Capabilities() {
               </em>
             </h2>
             <p className="mt-6 text-muted-foreground text-lg max-w-md text-pretty">
-              Every Prism stack ships against the same four pillars — visual, motion, surface,
+              Every UXC stack ships against the same four pillars — visual, motion, surface,
               architecture. Tuned, never overbuilt.
             </p>
           </div>

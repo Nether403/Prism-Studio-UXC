@@ -28,7 +28,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const primary = "#f97316"
 
   const title = lib?.name ?? "Library"
-  const tagline = lib?.tagline ?? "Curated for the Prism stack."
+  const tagline = lib?.tagline ?? "Curated for the UXC stack."
   const tags = (lib?.tags ?? []).slice(0, 5)
 
   return new ImageResponse(
@@ -69,7 +69,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         >
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 28, height: 28, borderRadius: 8, background: primary, display: "flex" }} />
-            <span>Prism · Library</span>
+            <span>UXC · Library</span>
           </div>
           <div
             style={{

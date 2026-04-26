@@ -19,7 +19,7 @@ const PATHS = [
     eyebrow: "01",
     title: "Describe it",
     blurb:
-      "Write a brief in plain English. Prism builds a stack, theme, and rationale tuned to your vibe.",
+      "Write a brief in plain English. UXC curates a stack, theme, and rationale tuned to your vibe.",
     cta: "Open the generator",
     isLocal: true,
   },
@@ -29,7 +29,7 @@ const PATHS = [
     eyebrow: "02",
     title: "From an image",
     blurb:
-      "Drop a screenshot, paste from clipboard, or share a Mobbin / Dribbble URL. Prism reads the vibe.",
+      "Drop a screenshot, paste from clipboard, or share a Mobbin / Dribbble URL. UXC reads the vibe.",
     cta: "Upload an image",
   },
   {
@@ -38,7 +38,7 @@ const PATHS = [
     eyebrow: "03",
     title: "From any URL",
     blurb:
-      "Paste a live site. Prism captures it, extracts the signature, and produces three reinterpretations.",
+      "Paste a live site. UXC captures it, extracts the signature, and produces three reinterpretations.",
     cta: "Rebuild a site",
     badge: "New",
   },

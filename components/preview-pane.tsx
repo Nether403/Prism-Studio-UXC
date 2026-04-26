@@ -395,7 +395,7 @@ function PreviewForm({ theme, motionOn }: { theme: Theme; motionOn: boolean }) {
 
         <ul className="mt-8 space-y-3 text-sm">
           {[
-            { i: <Mail className="h-3.5 w-3.5" />, t: "studio@prism.design" },
+            { i: <Mail className="h-3.5 w-3.5" />, t: "studio@uxc.me" },
             { i: <LockIcon className="h-3.5 w-3.5" />, t: "Private. Encrypted in transit." },
             { i: <Sparkles className="h-3.5 w-3.5 text-primary" />, t: "We respond personally." },
           ].map((row, i) => (

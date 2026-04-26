@@ -1,10 +1,10 @@
 # Roadmap
 
 A living document of what's shipped and what's planned next for
-Prism Studio. Reorder, edit, or strike through items freely as
+UXC (formerly Prism Studio). Reorder, edit, or strike through items freely as
 priorities shift.
 
-> Last updated: April 2026 (Phase 5 v1 — cross-user cache hits)
+> Last updated: April 2026 (Phase 5 v2 — UXC rebrand, sunset gradient identity)
 
 ---
 
@@ -130,10 +130,10 @@ Bigger bets that depend on the above shipping cleanly first.
 
 - [ ] **API access** — public REST endpoint for `/api/generate` and
       `/api/inspire` with per-key rate limiting via Upstash.
-- [ ] **Figma plugin** — paste a Prism stack URL into Figma, get the
+- [ ] **Figma plugin** — paste a UXC stack URL into Figma, get the
       palette + type tokens applied to the file.
 - [ ] **Browser extension** — right-click any site → "Rebuild with
-      Prism" opens `/rebuild?url=<current>`.
+      UXC" opens `/rebuild?url=<current>`.
 
 ### Trust & moderation
 

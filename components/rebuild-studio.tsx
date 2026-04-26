@@ -234,7 +234,7 @@ export function RebuildStudio({
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Cached from a public capture</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Reusing a signature another Prism user already published for this URL.
+                    Reusing a signature another UXC user already published for this URL.
                     {typeof result.cacheHits === "number" && result.cacheHits > 0 && (
                       <>
                         {" "}
@@ -447,10 +447,10 @@ function ReinterpretationPanel({
   // Caption is purely informational — surface the strongest provenance
   // signal the API gave us (public reuse > owner cache > fresh).
   const captionLabel = cachedFromPublic
-    ? "Prism reinterpretation · cached from public"
+    ? "UXC reinterpretation · cached from public"
     : cached
-      ? "Prism reinterpretation · cached"
-      : "Prism reinterpretation"
+      ? "UXC reinterpretation · cached"
+      : "UXC reinterpretation"
   return (
     <figure className="space-y-2">
       <figcaption className="flex items-center justify-between font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -464,7 +464,7 @@ function ReinterpretationPanel({
         <div className="flex h-full flex-col justify-between p-6 md:p-8">
           <div className="flex items-center justify-between text-[11px] opacity-80">
             <span className="font-mono uppercase tracking-[0.18em]">{hostname}</span>
-            <span className="font-mono">prism / reinterpretation</span>
+            <span className="font-mono">uxc / reinterpretation</span>
           </div>
           <div className="space-y-3">
             <p

@@ -61,7 +61,7 @@ export function LibraryGrid() {
             </h2>
           </div>
           <p className="text-muted-foreground max-w-md text-pretty">
-            Every library Prism considers. Each one scored on visual ceiling, performance load,
+            Every library UXC considers. Each one scored on visual ceiling, performance load,
             and category fit. Tap to read the docs.
           </p>
         </div>

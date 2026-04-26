@@ -159,11 +159,10 @@ export const metadata: Metadata = {
     images: ["/uxc-mark.jpg"],
   },
   icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
-      { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
-    ],
+    // Single SVG favicon — the gradient mark renders identically on both
+    // light and dark browser chrome because we paint it on a baked-in
+    // dark canvas. Apple touch icon points at the 1024² brand mark JPG.
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: "/uxc-mark.jpg",
   },
 }

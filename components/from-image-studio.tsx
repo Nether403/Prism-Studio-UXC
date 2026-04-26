@@ -129,7 +129,7 @@ export function FromImageStudio({ userEmail }: { userEmail: string | null }) {
         if (json.cachedFromPublic) {
           setCachedFromPublic({ hits: json.cacheHits ?? 0 })
           toast.info("Cached from public capture", {
-            description: "Reusing a signature another Prism user already published.",
+            description: "Reusing a signature another UXC user already published.",
           })
         } else if (json.cached) {
           toast.info("Pulled from cache", {
@@ -480,7 +480,7 @@ export function FromImageStudio({ userEmail }: { userEmail: string | null }) {
               <div className="space-y-1">
                 <p className="text-sm font-medium">Cached from a public capture</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Reusing a signature another Prism user already published.
+                  Reusing a signature another UXC user already published.
                   {cachedFromPublic.hits > 0 && (
                     <>
                       {" "}
