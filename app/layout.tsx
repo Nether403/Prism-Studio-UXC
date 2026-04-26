@@ -35,16 +35,67 @@ const instrument = Instrument_Serif({
 // preload: false + display: "swap" keeps them out of the critical path — they only
 // fetch when an AI-generated theme actually selects one. This prevents 9 extra
 // <link rel="preload"> tags from blocking first paint on every route.
-const FONT_OPTS = { preload: false, display: "swap" as const }
-const bricolage = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-bricolage", ...FONT_OPTS })
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-space", ...FONT_OPTS })
-const fraunces = Fraunces({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-fraunces", ...FONT_OPTS })
-const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", ...FONT_OPTS })
-const playfair = Playfair_Display({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-playfair", ...FONT_OPTS })
-const dmSerif = DM_Serif_Display({ subsets: ["latin"], weight: "400", variable: "--font-dm-serif", ...FONT_OPTS })
-const anton = Anton({ subsets: ["latin"], weight: "400", variable: "--font-anton", ...FONT_OPTS })
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", ...FONT_OPTS })
-const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", ...FONT_OPTS })
+//
+// NOTE: next/font's SWC plugin requires fully-static call options — no spread,
+// no shared object, no variables. Each option must be inlined per call.
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-bricolage",
+  preload: false,
+  display: "swap",
+})
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space",
+  preload: false,
+  display: "swap",
+})
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  variable: "--font-fraunces",
+  preload: false,
+  display: "swap",
+})
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
+  preload: false,
+  display: "swap",
+})
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  variable: "--font-playfair",
+  preload: false,
+  display: "swap",
+})
+const dmSerif = DM_Serif_Display({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-dm-serif",
+  preload: false,
+  display: "swap",
+})
+const anton = Anton({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-anton",
+  preload: false,
+  display: "swap",
+})
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  preload: false,
+  display: "swap",
+})
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  preload: false,
+  display: "swap",
+})
 
 const fontVariables = [
   geist.variable,
