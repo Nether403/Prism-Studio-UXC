@@ -27,6 +27,7 @@ import {
   recommend,
   type Audience,
   type GeneratorInput,
+  type MotionLevel,
   type Performance,
   type Recommendation,
   type Vibe,
@@ -43,6 +44,20 @@ import { ExportActions } from "@/components/export-actions"
 import type { ExportInput } from "@/lib/exporters"
 import { RealMetrics } from "@/components/real-metrics"
 import { VariantPicker } from "@/components/variant-picker"
+
+const motionLabels: Record<MotionLevel, string> = {
+  0: "Reduced",
+  1: "Subtle",
+  2: "Expressive",
+  3: "Maximum",
+}
+
+const motionDescriptions: Record<MotionLevel, string> = {
+  0: "No GSAP, no Three.js — respects prefers-reduced-motion. Lenis smooth scroll disabled.",
+  1: "Lenis smooth scroll only. Gentle GSAP fades welcome. No WebGL.",
+  2: "GSAP timelines and Three.js sparingly. The default for most sites.",
+  3: "Full Three.js + GSAP + physics. For sites where the motion is the point.",
+}
 
 const SUGGESTIONS = [
   "An immersive product launch site for a wireless audio brand with cinematic 3D and bold scroll-driven storytelling.",
@@ -77,6 +92,7 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
   const [vibe, setVibe] = useState<Vibe>("editorial")
   const [audience, setAudience] = useState<Audience>("creative")
   const [performance, setPerformance] = useState<Performance>("balanced")
+  const [motionLevel, setMotionLevel] = useState<MotionLevel>(2)
   const [includePaid, setIncludePaid] = useState(true)
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null)
   const [savedId, setSavedId] = useState<string | null>(null)
@@ -87,8 +103,8 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
   const resultRef = useRef<HTMLDivElement>(null)
 
   const input: GeneratorInput = useMemo(
-    () => ({ prompt, vibe, audience, performance, includePaid }),
-    [prompt, vibe, audience, performance, includePaid]
+    () => ({ prompt, vibe, audience, performance, includePaid, motionLevel }),
+    [prompt, vibe, audience, performance, includePaid, motionLevel]
   )
 
   const {
@@ -430,6 +446,52 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
                       </ToggleGroupItem>
                     ))}
                   </ToggleGroup>
+                </div>
+
+                <div>
+                  <div className="flex items-baseline justify-between">
+                    <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                      Motion tolerance
+                    </Label>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground">
+                      {motionLabels[motionLevel]}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={3}
+                    step={1}
+                    value={motionLevel}
+                    onChange={(e) =>
+                      setMotionLevel(Number(e.target.value) as MotionLevel)
+                    }
+                    aria-label="Motion tolerance"
+                    aria-valuetext={motionLabels[motionLevel]}
+                    className="mt-2 w-full appearance-none bg-transparent
+                      [&::-webkit-slider-runnable-track]:h-1
+                      [&::-webkit-slider-runnable-track]:rounded-full
+                      [&::-webkit-slider-runnable-track]:bg-border
+                      [&::-webkit-slider-thumb]:h-4
+                      [&::-webkit-slider-thumb]:w-4
+                      [&::-webkit-slider-thumb]:rounded-full
+                      [&::-webkit-slider-thumb]:bg-primary
+                      [&::-webkit-slider-thumb]:appearance-none
+                      [&::-webkit-slider-thumb]:-mt-[6px]
+                      [&::-webkit-slider-thumb]:cursor-pointer
+                      [&::-moz-range-track]:h-1
+                      [&::-moz-range-track]:rounded-full
+                      [&::-moz-range-track]:bg-border
+                      [&::-moz-range-thumb]:h-4
+                      [&::-moz-range-thumb]:w-4
+                      [&::-moz-range-thumb]:rounded-full
+                      [&::-moz-range-thumb]:bg-primary
+                      [&::-moz-range-thumb]:border-0
+                      [&::-moz-range-thumb]:cursor-pointer"
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                    {motionDescriptions[motionLevel]}
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-between rounded-md border border-border bg-background/40 p-3">
