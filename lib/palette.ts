@@ -223,20 +223,47 @@ export function assignRoles(raw: RawPalette): PaletteSwatch[] {
 
 /**
  * Decode an image (URL, data URL, or ArrayBuffer) into an RGB pixel buffer,
- * downsampled for speed. Returning roughly 64x64 pixels (~4096 samples) is
- * plenty for k-means and keeps the work under ~5ms.
+ * downsampled to roughly 96x96 for k-means speed. ~9000 samples is plenty for
+ * a 5-cluster extraction and keeps the sharp pass under ~50ms on cold start.
  *
- * Implemented as a stub today: throws unless a pre-decoded buffer is supplied.
- * When `sharp` is added to the project, swap the body of this function and
- * every caller of `extractPalette()` keeps working untouched.
+ * The decode is intentionally narrow: alpha is dropped (premultiplied against
+ * white so transparent corners read as background, not pollution), images are
+ * fitted "inside" so aspect ratio is preserved, and the input upper bound is
+ * clamped server-side by the route — this function trusts its inputs.
  */
 async function decodeImage(input: string | ArrayBuffer): Promise<Rgb[]> {
-  void input
-  throw new Error(
-    "[palette] decodeImage is not yet implemented. " +
-      "Install `sharp` and replace the body of decodeImage() in lib/palette.ts, " +
-      "or pass pre-decoded pixels directly to extractPaletteFromPixels()."
-  )
+  // Dynamic import: sharp is server-only and we don't want it pulled into any
+  // accidental client bundle that imports `extractPaletteFromPixels` directly.
+  const sharp = (await import("sharp")).default
+
+  let buffer: Buffer
+  if (typeof input === "string") {
+    if (input.startsWith("data:")) {
+      const comma = input.indexOf(",")
+      buffer = Buffer.from(input.slice(comma + 1), "base64")
+    } else {
+      const res = await fetch(input)
+      if (!res.ok) {
+        throw new Error(`[palette] decodeImage fetch failed: ${res.status}`)
+      }
+      buffer = Buffer.from(await res.arrayBuffer())
+    }
+  } else {
+    buffer = Buffer.from(input)
+  }
+
+  const { data, info } = await sharp(buffer)
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .resize({ width: 96, height: 96, fit: "inside", withoutEnlargement: true })
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const stride = info.channels
+  const pixels: Rgb[] = []
+  for (let i = 0; i + 2 < data.length; i += stride) {
+    pixels.push({ r: data[i], g: data[i + 1], b: data[i + 2] })
+  }
+  return pixels
 }
 
 // ---------------------------------------------------------------------------
