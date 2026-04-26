@@ -11,6 +11,8 @@ import { JsonLd } from "@/components/json-ld"
 import { ExternalLink, Lock, Sparkles, Gauge } from "lucide-react"
 import type { Theme } from "@/lib/themes"
 import { SITE_URL } from "@/lib/site"
+import { ProvenanceCard, type ProvenanceInspiration } from "@/components/provenance-card"
+import type { Signature } from "@/lib/signature"
 
 export const revalidate = 60
 
@@ -104,6 +106,32 @@ export default async function SharePage({
       .maybeSingle()
     initiallyLiked = !!likeRow
   }
+
+  // Provenance: the inspiration row (if any) that produced this stack.
+  // RLS filters automatically: anonymous viewers only see is_public=true rows;
+  // the owner sees their own. The most recent row wins on the rare occasion
+  // there are multiple captures linked to the same stack.
+  const { data: inspirationRow } = await supabase
+    .from("inspirations")
+    .select("id, source_type, source_ref, screenshot_url, signature, is_public, owner_id, created_at")
+    .eq("generated_stack_id", stack.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const inspiration: ProvenanceInspiration | null = inspirationRow
+    ? {
+        id: inspirationRow.id as string,
+        source_type: inspirationRow.source_type as ProvenanceInspiration["source_type"],
+        source_ref: inspirationRow.source_ref as string,
+        screenshot_url: (inspirationRow.screenshot_url as string | null) ?? null,
+        signature: (inspirationRow.signature as Signature | null) ?? null,
+        is_public: Boolean(inspirationRow.is_public),
+        created_at: inspirationRow.created_at as string,
+      }
+    : null
+  const viewerOwnsInspiration =
+    !!user && !!inspirationRow && inspirationRow.owner_id === user.id
 
   return (
     <main className="relative">
@@ -203,6 +231,22 @@ export default async function SharePage({
           )}
         </div>
       </section>
+
+      {inspiration && (
+        <section className="relative pb-12">
+          <div className="mx-auto max-w-5xl px-6">
+            <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground mb-4">
+              <span className="text-primary">·</span>
+              <span className="h-px w-8 bg-border" />
+              <span>Originated from</span>
+            </div>
+            <ProvenanceCard
+              inspiration={inspiration}
+              viewerIsOwner={viewerOwnsInspiration}
+            />
+          </div>
+        </section>
+      )}
 
       {/* Theme preview block — uses inline style with the actual saved tokens */}
       <section className="relative pb-12">
