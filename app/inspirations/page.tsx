@@ -31,12 +31,12 @@ import type { Signature, SourceType } from "@/lib/signature"
 export const metadata: Metadata = {
   title: "Inspirations — Captured signatures from the wild",
   description:
-    "A live feed of websites, OG images, uploaded screenshots, and notes the Prism community has captured into stack signatures.",
+    "A live feed of websites, OG images, uploaded screenshots, and notes the UXC community has captured into stack signatures.",
   alternates: { canonical: "/inspirations" },
   openGraph: {
-    title: "Prism Inspirations",
+    title: "UXC Inspirations",
     description:
-      "Live captures the Prism community has turned into stack signatures.",
+      "Live captures the UXC community has turned into stack signatures.",
     type: "website",
     url: `${SITE_URL}/inspirations`,
   },
@@ -100,10 +100,10 @@ export default async function InspirationsPage() {
           {
             "@context": "https://schema.org",
             "@type": "CollectionPage",
-            name: "Prism Inspirations",
+            name: "UXC Inspirations",
             url: `${SITE_URL}/inspirations`,
             description:
-              "Public captures from the Prism community — URLs, OG images, uploads, and notes turned into stack signatures.",
+              "Public captures from the UXC community — URLs, OG images, uploads, and notes turned into stack signatures.",
           },
         ]}
       />

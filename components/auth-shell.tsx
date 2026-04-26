@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { Sparkles } from "lucide-react"
 import type { ReactNode } from "react"
+import { UxcWordmark } from "@/components/uxc-wordmark"
 
 export function AuthShell({
   index,
@@ -23,16 +23,15 @@ export function AuthShell({
 
       {/* Top bar */}
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <Link href="/" className="flex items-center gap-2 text-sm font-medium" data-cursor="hover">
-          <Sparkles className="h-4 w-4 text-primary" />
-          Prism Studio
+        <Link href="/" className="inline-flex items-center" data-cursor="hover">
+          <UxcWordmark variant="lockup" />
         </Link>
         <Link
           href="/"
           className="font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground transition"
           data-cursor="hover"
         >
-          ← Back to studio
+          ← Back to UXC
         </Link>
       </header>
 

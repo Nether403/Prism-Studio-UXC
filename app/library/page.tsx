@@ -7,14 +7,14 @@ import { LibraryDemo } from "@/components/library-demo"
 import { Lock } from "lucide-react"
 
 export const metadata = {
-  title: "Library — Prism Studio",
+  title: "Library — UXC",
   description:
-    "A curated index of every front-end library Prism knows about, with categories, tiers, and live micro-demos.",
+    "A curated index of every front-end library UXC knows about, with categories, tiers, and live micro-demos.",
   alternates: { canonical: "/library" },
   openGraph: {
-    title: "Prism Library",
+    title: "UXC Library",
     description:
-      "Three.js, GSAP, Tailwind, Framer Motion, Lenis, shadcn/ui — every library Prism composes from, with live demos.",
+      "Three.js, GSAP, Tailwind, Framer Motion, Lenis, shadcn/ui — every library UXC curates from, with live demos.",
     type: "website",
     url: "/library",
   },
@@ -48,7 +48,7 @@ export default function LibraryIndex() {
             01 · Library
           </div>
           <h1 className="mt-5 font-display text-5xl md:text-7xl tracking-[-0.04em] leading-[0.95]">
-            Every library Prism knows.
+            Every library UXC knows.
           </h1>
           <p className="mt-6 max-w-2xl text-pretty text-lg text-muted-foreground leading-relaxed">
             {LIBRARIES.length} libraries, sorted by category. Each comes with a live demo, docs

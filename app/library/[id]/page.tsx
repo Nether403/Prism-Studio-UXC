@@ -22,15 +22,15 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const lib = LIBRARIES.find((l) => l.id === id)
-  if (!lib) return { title: "Library not found · Prism" }
+  if (!lib) return { title: "Library not found · UXC" }
   const ogUrl = `/api/og/library/${lib.id}`
   const canonical = `/library/${lib.id}`
   return {
-    title: `${lib.name} — ${lib.tagline} · Prism`,
+    title: `${lib.name} — ${lib.tagline} · UXC`,
     description: lib.description,
     alternates: { canonical },
     openGraph: {
-      title: `${lib.name} on Prism`,
+      title: `${lib.name} on UXC`,
       description: lib.description,
       type: "article",
       url: canonical,
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     },
     twitter: {
       card: "summary_large_image",
-      title: `${lib.name} on Prism`,
+      title: `${lib.name} on UXC`,
       description: lib.description,
       images: [ogUrl],
     },

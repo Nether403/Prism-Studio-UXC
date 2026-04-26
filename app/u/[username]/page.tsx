@@ -20,11 +20,11 @@ export async function generateMetadata({
   const { username } = await params
   const canonical = `/u/${username}`
   return {
-    title: `@${username} · Prism`,
+    title: `@${username} · UXC`,
     description: `Stacks published by @${username}.`,
     alternates: { canonical },
     openGraph: {
-      title: `@${username} on Prism`,
+      title: `@${username} on UXC`,
       description: `Design stacks published by @${username}.`,
       type: "profile",
       url: canonical,

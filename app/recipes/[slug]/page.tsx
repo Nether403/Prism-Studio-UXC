@@ -25,7 +25,7 @@ export async function generateMetadata({
   const { slug } = await params
   const recipe = getRecipe(slug)
   if (!recipe) return {}
-  const title = `${recipe.title} — Prism Recipe`
+  const title = `${recipe.title} — UXC Recipe`
   const ogUrl = `/api/og/recipe/${recipe.slug}`
   const canonical = `/recipes/${recipe.slug}`
   return {
@@ -95,8 +95,8 @@ export default async function RecipePage({
             description: recipe.tagline,
             mainEntityOfPage: `${SITE_URL}/recipes/${recipe.slug}`,
             image: `${SITE_URL}/api/og/recipe/${recipe.slug}`,
-            author: { "@type": "Organization", name: "Prism" },
-            publisher: { "@type": "Organization", name: "Prism" },
+            author: { "@type": "Organization", name: "UXC" },
+            publisher: { "@type": "Organization", name: "UXC" },
           },
         ]}
       />

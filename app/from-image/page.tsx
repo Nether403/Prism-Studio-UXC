@@ -6,7 +6,7 @@ import { Nav } from "@/components/nav"
 import { Footer } from "@/components/footer"
 
 export const metadata = {
-  title: "From image — Prism Studio",
+  title: "From image — UXC",
   description:
     "Drop a screenshot, paste from clipboard, or paste a Mobbin / Dribbble URL. Get a stack proposal with a matching theme.",
 }
@@ -40,7 +40,7 @@ export default async function FromImagePage({
               Drop a screenshot. Get a buildable stack.
             </h1>
             <p className="mt-4 text-muted-foreground leading-relaxed text-pretty">
-              Drop, paste, or link to a piece of visual reference. Prism extracts a Signature —
+              Drop, paste, or link to a piece of visual reference. UXC extracts a Signature —
               palette, fonts, vibe, motion — and proposes a custom stack you can
               {" "}
               <Link href="/dashboard" className="underline underline-offset-4">

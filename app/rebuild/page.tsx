@@ -14,7 +14,7 @@ function isLikelyUrl(value: string): boolean {
 }
 
 export const metadata: Metadata = {
-  title: "Rebuild any site — Prism Studio",
+  title: "Rebuild any site — UXC",
   description:
     "Paste any URL. We capture, analyze, and propose a fresh design direction with a stack to match.",
 }

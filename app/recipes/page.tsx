@@ -7,12 +7,12 @@ import { RECIPES as recipes } from "@/lib/recipes"
 import { ArrowUpRight, Sparkles } from "lucide-react"
 
 export const metadata: Metadata = {
-  title: "Recipes — Prism Studio",
+  title: "Recipes — UXC",
   description:
     "Curated, ready-to-build stacks for the work you actually ship. Each recipe is a fully themed Next.js starter you can preview, fork, and download.",
   alternates: { canonical: "/recipes" },
   openGraph: {
-    title: "Recipes — Prism Studio",
+    title: "Recipes — UXC",
     description:
       "Editorial portfolios, 3D product pages, AI dashboards. Pre-built stacks with theme tokens, motion, and code already wired.",
     type: "website",

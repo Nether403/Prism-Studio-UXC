@@ -10,7 +10,7 @@ import { ProvenanceStrip, type ProvenanceInspiration } from "@/components/proven
 import type { Theme } from "@/lib/themes"
 
 export const metadata = {
-  title: "My Stacks · Prism",
+  title: "My Stacks · UXC",
   description: "Your saved stacks, drafts, and forks.",
 }
 

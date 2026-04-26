@@ -116,17 +116,18 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: SITE.fullName,
-    template: "%s · Prism",
+    template: "%s · UXC",
   },
   description:
-    "Describe an idea. Prism composes a stack of best-in-class design libraries — Three.js, GSAP, Shadcn, Tailwind, Lenis, Next.js — tuned for visual impact.",
+    "Describe an idea. UXC curates a stack of best-in-class design libraries — Three.js, GSAP, Shadcn, Tailwind, Lenis, Next.js — tuned for visual impact.",
   applicationName: SITE.name,
   generator: "v0.app",
   alternates: {
     canonical: "/",
-    types: { "application/rss+xml": [{ url: "/feed.xml", title: "Prism changelog" }] },
+    types: { "application/rss+xml": [{ url: "/feed.xml", title: "UXC changelog" }] },
   },
   keywords: [
+    "UX curator",
     "design generator",
     "stack generator",
     "Three.js",
@@ -143,30 +144,34 @@ export const metadata: Metadata = {
   openGraph: {
     title: SITE.fullName,
     description:
-      "Describe an idea. Prism composes a stack of best-in-class design libraries tuned for visual impact.",
+      "Describe an idea. UXC curates a stack of best-in-class design libraries tuned for visual impact.",
     type: "website",
     url: SITE_URL,
     siteName: SITE.name,
     locale: SITE.locale,
+    images: [{ url: "/uxc-mark.jpg", width: 1024, height: 1024, alt: "UXC" }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE.fullName,
     description:
-      "Describe an idea. Prism composes a stack of best-in-class design libraries tuned for visual impact.",
+      "Describe an idea. UXC curates a stack of best-in-class design libraries tuned for visual impact.",
+    images: ["/uxc-mark.jpg"],
   },
   icons: {
     icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
       { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
       { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
-      { url: "/icon.svg", type: "image/svg+xml" },
     ],
-    apple: "/apple-icon.png",
+    apple: "/uxc-mark.jpg",
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a",
+  // Warm-tinted near-black canvas, matching --background. Browser chrome
+  // on iOS/Android picks this up for the mobile address-bar tint.
+  themeColor: "#0c0807",
   width: "device-width",
   initialScale: 1,
 }
