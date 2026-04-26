@@ -31,16 +31,20 @@ const instrument = Instrument_Serif({
   variable: "--font-display",
 })
 
-// Extra fonts available for AI-generated themes (loaded via CSS variables on document)
-const bricolage = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-bricolage" })
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-space" })
-const fraunces = Fraunces({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-fraunces" })
-const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" })
-const playfair = Playfair_Display({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-playfair" })
-const dmSerif = DM_Serif_Display({ subsets: ["latin"], weight: "400", variable: "--font-dm-serif" })
-const anton = Anton({ subsets: ["latin"], weight: "400", variable: "--font-anton" })
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
-const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" })
+// Extra fonts available for AI-generated themes (loaded via CSS variables on document).
+// preload: false + display: "swap" keeps them out of the critical path — they only
+// fetch when an AI-generated theme actually selects one. This prevents 9 extra
+// <link rel="preload"> tags from blocking first paint on every route.
+const FONT_OPTS = { preload: false, display: "swap" as const }
+const bricolage = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-bricolage", ...FONT_OPTS })
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-space", ...FONT_OPTS })
+const fraunces = Fraunces({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-fraunces", ...FONT_OPTS })
+const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", ...FONT_OPTS })
+const playfair = Playfair_Display({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-playfair", ...FONT_OPTS })
+const dmSerif = DM_Serif_Display({ subsets: ["latin"], weight: "400", variable: "--font-dm-serif", ...FONT_OPTS })
+const anton = Anton({ subsets: ["latin"], weight: "400", variable: "--font-anton", ...FONT_OPTS })
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", ...FONT_OPTS })
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", ...FONT_OPTS })
 
 const fontVariables = [
   geist.variable,

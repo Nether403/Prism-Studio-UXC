@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { useEffect, useRef, useState } from "react"
+import { isFxDisabled } from "@/lib/fx"
 
 const Scene = dynamic(() => import("@/components/scene").then((m) => m.Scene), {
   ssr: false,
@@ -13,32 +14,55 @@ const Scene = dynamic(() => import("@/components/scene").then((m) => m.Scene), {
  * user scrolls past the hero. Gated for performance:
  *   - Skipped entirely on prefers-reduced-motion
  *   - Skipped on coarse-pointer (mobile) by default — opt in with `mobile`
- *   - Lazy: defers Canvas mount to the next idle frame
+ *   - Skipped when the URL contains ?nofx=1 (debug / preview escape hatch)
+ *   - Lazy: defers Canvas mount until the hero sentinel intersects the viewport
  *   - Visibility-aware: pauses by toggling `visibility:hidden` once faded out
  *
  * Mount on a SINGLE route (homepage) — not in the global layout.
  */
 export function SceneMount({ mobile = false }: { mobile?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
   const [enabled, setEnabled] = useState(false)
 
   useEffect(() => {
     if (typeof window === "undefined") return
+    if (isFxDisabled()) return
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     const coarse = window.matchMedia("(pointer: coarse)").matches
     if (reduced) return
     if (coarse && !mobile) return
 
-    // Defer mount until the browser is idle to keep TTI/LCP clean.
-    const idle =
-      (window as unknown as { requestIdleCallback?: (cb: () => void) => number })
-        .requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 200))
-    const handle = idle(() => setEnabled(true))
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+
+    // Only boot the Canvas if the hero sentinel is actually intersecting.
+    // This means: the iframe is visible AND the user is near the top of the page.
+    // If they land deep-linked further down, we never spin up Three.js at all.
+    let cancelled = false
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (cancelled) return
+        const visible = entries.some((e) => e.isIntersecting)
+        if (!visible) return
+        io.disconnect()
+
+        // Defer the actual mount one more idle tick so chat hydration / fonts
+        // get a chance to settle before we drop in a WebGL context.
+        const idle =
+          (window as unknown as { requestIdleCallback?: (cb: () => void) => number })
+            .requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 200))
+        idle(() => {
+          if (!cancelled) setEnabled(true)
+        })
+      },
+      { rootMargin: "0px" }
+    )
+    io.observe(sentinel)
+
     return () => {
-      const cancel =
-        (window as unknown as { cancelIdleCallback?: (h: number) => void })
-          .cancelIdleCallback ?? window.clearTimeout
-      cancel(handle as unknown as number)
+      cancelled = true
+      io.disconnect()
     }
   }, [mobile])
 
@@ -67,16 +91,24 @@ export function SceneMount({ mobile = false }: { mobile?: boolean }) {
     }
   }, [enabled])
 
-  if (!enabled) return null
-
   return (
-    <div
-      ref={ref}
-      aria-hidden
-      className="pointer-events-none transition-opacity duration-200"
-      style={{ position: "fixed", inset: 0, zIndex: 0 }}
-    >
-      <Scene />
-    </div>
+    <>
+      {/* Sentinel sits at the top of the page; once it intersects, we boot the scene. */}
+      <div
+        ref={sentinelRef}
+        aria-hidden
+        style={{ position: "absolute", top: 0, left: 0, width: 1, height: "60vh", pointerEvents: "none" }}
+      />
+      {enabled && (
+        <div
+          ref={ref}
+          aria-hidden
+          className="pointer-events-none transition-opacity duration-200"
+          style={{ position: "fixed", inset: 0, zIndex: 0 }}
+        >
+          <Scene />
+        </div>
+      )}
+    </>
   )
 }
