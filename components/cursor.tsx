@@ -2,13 +2,19 @@
 
 import { useEffect, useRef } from "react"
 import gsap from "gsap"
+import { isFxDisabled } from "@/lib/fx"
 
 /**
  * Custom cursor with two layers:
  *  - dot: tracks pointer 1:1 (very fast)
  *  - ring: lerps with delay, expands on interactive elements
- * Snaps to nearest [data-cursor="hover"] within 80px (magnetic).
- * Hidden on touch devices.
+ * Snaps to nearest [data-cursor="hover"] within 100px (magnetic).
+ *
+ * Performance:
+ *  - Hidden on touch devices and when ?nofx=1 is set
+ *  - mousemove handler is rAF-coalesced — at most one update per frame
+ *  - Magnetic DOM walk (closest()) is skipped while the pointer is moving
+ *    fast (>4px/frame), since the user clearly isn't aiming at anything.
  */
 export function Cursor() {
   const dotRef = useRef<HTMLDivElement>(null)
@@ -16,6 +22,7 @@ export function Cursor() {
 
   useEffect(() => {
     if (typeof window === "undefined") return
+    if (isFxDisabled()) return
     if (window.matchMedia("(pointer: coarse)").matches) return
 
     const dot = dotRef.current
@@ -31,35 +38,58 @@ export function Cursor() {
 
     let mouseX = 0
     let mouseY = 0
+    let lastX = 0
+    let lastY = 0
+    let pendingTarget: EventTarget | null = null
+    let rafId = 0
+    let queued = false
+
+    const flush = () => {
+      queued = false
+      rafId = 0
+      const dx = mouseX - lastX
+      const dy = mouseY - lastY
+      const speed = Math.hypot(dx, dy)
+      lastX = mouseX
+      lastY = mouseY
+
+      setDotX(mouseX)
+      setDotY(mouseY)
+
+      // Skip the DOM walk during fast moves — the user isn't snapping to anything.
+      if (speed < 4 && pendingTarget) {
+        const target = (pendingTarget as HTMLElement)?.closest?.('[data-cursor="hover"]') as
+          | HTMLElement
+          | null
+        if (target) {
+          const rect = target.getBoundingClientRect()
+          const cx = rect.left + rect.width / 2
+          const cy = rect.top + rect.height / 2
+          const ddx = mouseX - cx
+          const ddy = mouseY - cy
+          const dist = Math.hypot(ddx, ddy)
+          if (dist < 100) {
+            const pull = (1 - dist / 100) * 0.5
+            setRingX(cx + ddx * (1 - pull))
+            setRingY(cy + ddy * (1 - pull))
+            ring.classList.add("is-hovering")
+            return
+          }
+        }
+      }
+      setRingX(mouseX)
+      setRingY(mouseY)
+      ring.classList.remove("is-hovering")
+    }
 
     const onMove = (e: MouseEvent) => {
       mouseX = e.clientX
       mouseY = e.clientY
-      setDotX(e.clientX)
-      setDotY(e.clientY)
-
-      // Magnetic snap
-      const target = (e.target as HTMLElement)?.closest?.('[data-cursor="hover"]') as
-        | HTMLElement
-        | null
-      if (target) {
-        const rect = target.getBoundingClientRect()
-        const cx = rect.left + rect.width / 2
-        const cy = rect.top + rect.height / 2
-        const dx = e.clientX - cx
-        const dy = e.clientY - cy
-        const dist = Math.hypot(dx, dy)
-        if (dist < 100) {
-          const pull = (1 - dist / 100) * 0.5
-          setRingX(cx + dx * (1 - pull))
-          setRingY(cy + dy * (1 - pull))
-          ring.classList.add("is-hovering")
-          return
-        }
+      pendingTarget = e.target
+      if (!queued) {
+        queued = true
+        rafId = requestAnimationFrame(flush)
       }
-      setRingX(e.clientX)
-      setRingY(e.clientY)
-      ring.classList.remove("is-hovering")
     }
 
     const onDown = () => ring.classList.add("is-pressed")
@@ -73,13 +103,14 @@ export function Cursor() {
       dot.style.opacity = "1"
     }
 
-    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mousemove", onMove, { passive: true })
     window.addEventListener("mousedown", onDown)
     window.addEventListener("mouseup", onUp)
     document.addEventListener("mouseleave", onLeave)
     document.addEventListener("mouseenter", onEnter)
 
     return () => {
+      if (rafId) cancelAnimationFrame(rafId)
       window.removeEventListener("mousemove", onMove)
       window.removeEventListener("mousedown", onDown)
       window.removeEventListener("mouseup", onUp)

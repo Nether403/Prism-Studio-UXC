@@ -1,9 +1,14 @@
 "use client"
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { Environment, Float, MeshDistortMaterial, Points, PointMaterial } from "@react-three/drei"
+import { Float, MeshDistortMaterial, Points, PointMaterial } from "@react-three/drei"
 import { Suspense, useEffect, useMemo, useRef } from "react"
 import * as THREE from "three"
+
+// Stars count was 2000 — at that density the cost is dominated by the rAF
+// rotation update on a Points mesh of ~6k floats, which triggers GPU re-uploads
+// every frame. 600 looks visually near-identical against the dark fog.
+const STAR_COUNT = 600
 
 /**
  * Global, scroll-driven scene. Listens to window scroll + mouse and drives
@@ -14,8 +19,8 @@ import * as THREE from "three"
 function Stars({ scrollRef }: { scrollRef: React.MutableRefObject<number> }) {
   const ref = useRef<THREE.Points>(null!)
   const positions = useMemo(() => {
-    const arr = new Float32Array(2000 * 3)
-    for (let i = 0; i < 2000; i++) {
+    const arr = new Float32Array(STAR_COUNT * 3)
+    for (let i = 0; i < STAR_COUNT; i++) {
       const r = 6 + Math.random() * 8
       const theta = Math.random() * Math.PI * 2
       const phi = Math.acos(2 * Math.random() - 1)
@@ -101,13 +106,15 @@ function Orb({
           ref={matRef}
           color="#d4ff3a"
           emissive="#d4ff3a"
-          emissiveIntensity={0.12}
-          roughness={0.25}
-          metalness={0.7}
+          // Without the HDRI environment we lean on emissive + lower metalness
+          // so the orb still reads as luminous against the fog.
+          emissiveIntensity={0.35}
+          roughness={0.55}
+          metalness={0.3}
           distort={0.42}
           speed={1.6}
           transparent
-          opacity={0.55}
+          opacity={0.6}
           depthWrite={false}
         />
       </mesh>
@@ -181,11 +188,16 @@ export function Scene() {
         <pointLight position={[-3, 2, -2]} intensity={2} color="#ff5e1f" />
         <pointLight position={[3, -2, 2]} intensity={1.5} color="#d4ff3a" />
 
+        {/*
+          Removed <Environment preset="city" />: the HDRI was a ~1MB async fetch
+          plus a heavy CubeUVReflectionMapping pass on every frame that the orb's
+          MeshDistortMaterial referenced. The existing directional + point lights
+          give the orb plenty of definition against the fog.
+        */}
         <Suspense fallback={null}>
           <Orb mouseRef={mouseRef} scrollRef={scrollRef} />
           <Ring scrollRef={scrollRef} />
           <Stars scrollRef={scrollRef} />
-          <Environment preset="city" />
         </Suspense>
         <CameraDolly scrollRef={scrollRef} />
       </Canvas>

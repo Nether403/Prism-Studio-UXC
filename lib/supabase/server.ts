@@ -1,12 +1,22 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { createStubClient, isSupabaseConfigured } from './stub'
 
 /**
  * Especially important if using Fluid compute: Don't put this client in a
  * global variable. Always create a new client within each function when using
  * it.
+ *
+ * If Supabase env vars are missing (e.g. local sandbox without the integration
+ * connected), this returns a stub client that responds with "no user / empty
+ * data" instead of throwing — so server components keep rendering.
  */
-export async function createClient() {
+export async function createClient(): Promise<SupabaseClient> {
+  if (!isSupabaseConfigured()) {
+    return createStubClient() as SupabaseClient
+  }
+
   const cookieStore = await cookies()
 
   return createServerClient(
@@ -17,7 +27,7 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options),

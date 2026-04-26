@@ -29,9 +29,20 @@ type RebuildResult = {
   cached: boolean
 }
 
-export function RebuildStudio({ initialQuota }: { initialQuota: QuotaStatus }) {
+export function RebuildStudio({
+  initialQuota,
+  initialUrl = "",
+}: {
+  initialQuota: QuotaStatus
+  /**
+   * Pre-fill the URL input. Used when the user clicks "Re-rebuild" from a
+   * provenance card on /s/[id] — the share page passes ?url=… here so the
+   * resume flow lands them ready to submit, not staring at an empty field.
+   */
+  initialUrl?: string
+}) {
   const router = useRouter()
-  const [url, setUrl] = useState("")
+  const [url, setUrl] = useState(initialUrl)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<RebuildResult | null>(null)
   const [quota, setQuota] = useState<QuotaStatus>(initialQuota)

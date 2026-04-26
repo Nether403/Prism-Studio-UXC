@@ -4,13 +4,27 @@ import { createClient } from "@/lib/supabase/server"
 import { readRebuildQuota, REBUILD_DAILY_LIMIT } from "@/lib/ratelimit"
 import { RebuildStudio } from "@/components/rebuild-studio"
 
+function isLikelyUrl(value: string): boolean {
+  try {
+    const u = new URL(value)
+    return u.protocol === "http:" || u.protocol === "https:"
+  } catch {
+    return false
+  }
+}
+
 export const metadata: Metadata = {
   title: "Rebuild any site — Prism Studio",
   description:
     "Paste any URL. We capture, analyze, and propose a fresh design direction with a stack to match.",
 }
 
-export default async function RebuildPage() {
+export default async function RebuildPage({
+  searchParams,
+}: {
+  // Next.js 16: searchParams is async and must be awaited before use.
+  searchParams: Promise<{ url?: string | string[] }>
+}) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -27,6 +41,13 @@ export default async function RebuildPage() {
     remaining: REBUILD_DAILY_LIMIT,
     resetAt: new Date().toISOString(),
   }))
+
+  // Pull `?url=…` into the studio so the "Re-rebuild" CTA on the provenance
+  // card lands the user with their original URL pre-filled. We validate the
+  // URL shape on the server so a junk query string doesn't pollute the input.
+  const sp = await searchParams
+  const rawUrl = Array.isArray(sp.url) ? sp.url[0] : sp.url
+  const initialUrl = rawUrl && isLikelyUrl(rawUrl) ? rawUrl : ""
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -46,7 +67,7 @@ export default async function RebuildPage() {
           </p>
         </header>
 
-        <RebuildStudio initialQuota={quota} />
+        <RebuildStudio initialQuota={quota} initialUrl={initialUrl} />
       </section>
     </main>
   )

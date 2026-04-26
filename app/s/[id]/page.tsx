@@ -11,6 +11,8 @@ import { JsonLd } from "@/components/json-ld"
 import { ExternalLink, Lock, Sparkles, Gauge } from "lucide-react"
 import type { Theme } from "@/lib/themes"
 import { SITE_URL } from "@/lib/site"
+import { ProvenanceCard } from "@/components/provenance-card"
+import type { Signature, SourceType } from "@/lib/signature"
 
 export const revalidate = 60
 
@@ -104,6 +106,33 @@ export default async function SharePage({
       .maybeSingle()
     initiallyLiked = !!likeRow
   }
+
+  // Provenance: the most recent inspiration row whose generated_stack_id
+  // matches this stack. RLS ensures only public rows are visible to
+  // non-owners — when the row is private, viewers other than the owner get
+  // null back and the section silently disappears.
+  const { data: inspirationRow } = await supabase
+    .from("inspirations")
+    .select("id, source_type, source_ref, screenshot_url, signature, is_public, owner_id, created_at")
+    .eq("generated_stack_id", stack.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const inspiration = inspirationRow as
+    | {
+        id: string
+        source_type: SourceType
+        source_ref: string
+        screenshot_url: string | null
+        signature: Signature | null
+        is_public: boolean
+        owner_id: string | null
+        created_at: string
+      }
+    | null
+
+  const isInspirationOwner = Boolean(user && inspiration && user.id === inspiration.owner_id)
 
   return (
     <main className="relative">
@@ -349,6 +378,10 @@ export default async function SharePage({
           </ol>
         </div>
       </section>
+
+      {inspiration && (
+        <ProvenanceCard inspiration={inspiration} isOwner={isInspirationOwner} />
+      )}
 
       <Footer />
       <CommandPalette />

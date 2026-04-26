@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import Lenis from "lenis"
+import { isFxDisabled } from "@/lib/fx"
 
 /**
  * Smooth-scroll provider with sensible bailouts:
@@ -14,6 +15,7 @@ export function LenisProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return
 
+    if (isFxDisabled()) return
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     const touch = window.matchMedia("(hover: none) and (pointer: coarse)").matches
     const small = window.matchMedia("(max-width: 768px)").matches
