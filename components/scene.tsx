@@ -101,11 +101,14 @@ function Orb({
           ref={matRef}
           color="#d4ff3a"
           emissive="#d4ff3a"
-          emissiveIntensity={0.15}
-          roughness={0.15}
-          metalness={0.85}
+          emissiveIntensity={0.12}
+          roughness={0.25}
+          metalness={0.7}
           distort={0.42}
           speed={1.6}
+          transparent
+          opacity={0.55}
+          depthWrite={false}
         />
       </mesh>
     </Float>
@@ -124,7 +127,7 @@ function Ring({ scrollRef }: { scrollRef: React.MutableRefObject<number> }) {
   return (
     <mesh ref={ref} position={[0, 0, -0.5]}>
       <torusGeometry args={[3, 0.012, 16, 200]} />
-      <meshBasicMaterial color="#ff5e1f" transparent opacity={0.5} />
+      <meshBasicMaterial color="#ff5e1f" transparent opacity={0.3} depthWrite={false} />
     </mesh>
   )
 }
