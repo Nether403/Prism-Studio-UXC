@@ -5,12 +5,25 @@ import { generateResponseSchema } from "@/lib/generate-schema"
 
 export const maxDuration = 30
 
+function motionLabel(level: 0 | 1 | 2 | 3 | undefined): string {
+  switch (level) {
+    case 0: return "reduced — no GSAP, no Three motion, prefers-reduced-motion"
+    case 1: return "subtle — Lenis ok, gentle GSAP only, no Three"
+    case 3: return "maximum — full Three + GSAP + physics encouraged"
+    case 2:
+    default: return "expressive — GSAP yes, Three sparingly (default)"
+  }
+}
+
 const inputSchema = z.object({
   prompt: z.string().min(4).max(800),
   vibe: z.enum(["minimal", "bold", "editorial", "playful", "experimental"]),
   audience: z.enum(["consumer", "enterprise", "developer", "creative"]),
   performance: z.enum(["max", "balanced", "rich"]),
   includePaid: z.boolean(),
+  motionLevel: z
+    .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
+    .optional(),
 })
 
 export async function POST(req: Request) {
@@ -46,6 +59,7 @@ ${input.prompt}
 VIBE: ${input.vibe}
 AUDIENCE: ${input.audience}
 PERFORMANCE BUDGET: ${input.performance}
+MOTION TOLERANCE: ${motionLabel(input.motionLevel)}
 INCLUDE PAID/AUTH-REQUIRED: ${input.includePaid}
 
 PRE-SELECTED STACK (you must produce one reason for each, in this exact order, using the given id):
