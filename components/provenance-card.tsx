@@ -13,6 +13,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { ExternalLink, Globe, ImageIcon, Lock, ScrollText, Sparkles } from "lucide-react"
 import type { Signature, SourceType } from "@/lib/signature"
+import { InspirationPrivacyToggle } from "@/components/inspiration-privacy-toggle"
 
 export type ProvenanceCardProps = {
   inspiration: {
@@ -94,14 +95,27 @@ export function ProvenanceCard({ inspiration, isOwner }: ProvenanceCardProps) {
                 <SourceIcon className="h-3 w-3" aria-hidden />
                 {sourceLabel}
               </span>
-              {!is_public && (
-                <span
-                  className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground backdrop-blur"
-                  title="This inspiration is private to you"
-                >
-                  <Lock className="h-3 w-3" aria-hidden />
-                  Private
-                </span>
+              {/*
+                Top-right slot: owners get the live privacy toggle so they can
+                flip is_public from this page. Non-owners only ever land here
+                when the row is already public (RLS strips private rows from
+                their query), so we render no badge at all in that case.
+              */}
+              {isOwner ? (
+                <InspirationPrivacyToggle
+                  inspirationId={inspiration.id}
+                  initialPublic={is_public}
+                />
+              ) : (
+                !is_public && (
+                  <span
+                    className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground backdrop-blur"
+                    title="This inspiration is private to you"
+                  >
+                    <Lock className="h-3 w-3" aria-hidden />
+                    Private
+                  </span>
+                )
               )}
             </div>
           </div>
