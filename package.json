@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "evals:run": "tsx --tsconfig tsconfig.json scripts/evals/run-evals.ts",
+    "evals:baseline": "tsx --tsconfig tsconfig.json scripts/evals/run-evals.ts --baseline",
+    "evals:diff": "tsx --tsconfig tsconfig.json scripts/evals/diff-evals.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.170",
@@ -84,6 +87,7 @@
     "@types/react-dom": "^19",
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
+    "tsx": "^4.20.3",
     "tw-animate-css": "1.3.3",
     "typescript": "5.7.3"
   }

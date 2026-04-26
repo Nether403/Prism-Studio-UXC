@@ -5,47 +5,21 @@
 // Vision-in / vision-out. Accepts an image upload OR a Mobbin/Dribbble/etc URL,
 // extracts a canonical Signature, and persists it to the inspirations table.
 //
-// Flow:
-//   1. Auth gate (Supabase). RLS already enforces this on insert; we 401 early
-//      so the user gets a clean error before bytes are uploaded.
-//   2. Parse FormData → bytes (file) or fetchOgImage(url) → bytes
-//   3. SHA-256 the bytes. Per-user cache lookup; return early on hit.
-//   4. Decode + run deterministic k-means palette extraction (lib/palette.ts).
-//   5. Upload to Blob if user-uploaded. OG keeps the source imageUrl.
-//   6. Call Gemini 3 Flash via generateText + Output.object() with the image
-//      and the deterministic palette as input context.
-//   7. Validate Gemini's palette against our deterministic hexes; fall back
-//      to heuristic assignRoles() if Gemini wandered.
-//   8. Persist Signature to inspirations row, return { inspirationId, signature }.
+// All signature-extraction logic lives in lib/extract-signature.ts so this
+// route, /api/rebuild, and the eval harness all share one prompt + one schema.
 // ---------------------------------------------------------------------------
 
-import { generateText, Output } from "ai"
 import { put } from "@vercel/blob"
 import { createHash } from "node:crypto"
 import { createClient } from "@/lib/supabase/server"
-import {
-  signatureSchema,
-  type Signature,
-  type SourceType,
-  type PaletteSwatch,
-} from "@/lib/signature"
-import { extractPaletteFromPixels, hexToRgb } from "@/lib/palette"
-import { assignRoles, type RawPalette } from "@/lib/palette"
-import { fetchOgImage, isOgAllowedDomain } from "@/lib/og"
+import { type Signature, type SourceType } from "@/lib/signature"
+import { fetchOgImage } from "@/lib/og"
+import { extractSignature } from "@/lib/extract-signature"
 
 export const maxDuration = 60
 export const runtime = "nodejs"
 
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024 // 12MB
-
-// ---------------------------------------------------------------------------
-// Schema for the LLM step.
-//   - We omit `source` (server-attached).
-//   - Palette stays in the schema so Gemini fills role + name + hex from the
-//     deterministic five we provided. We post-validate that every hex Gemini
-//     returned matches one of ours; if not, we fall back to assignRoles().
-// ---------------------------------------------------------------------------
-const generationSchema = signatureSchema.omit({ source: true })
 
 export async function POST(req: Request) {
   // 1) Auth gate
@@ -126,35 +100,8 @@ export async function POST(req: Request) {
     }
   }
 
-  // 4) Decode + deterministic palette extraction (sharp)
-  let deterministicPalette: PaletteSwatch[]
-  let rawPalette: RawPalette = []
-  try {
-    const sharp = (await import("sharp")).default
-    const { data, info } = await sharp(Buffer.from(bytes))
-      .flatten({ background: { r: 255, g: 255, b: 255 } })
-      .resize({ width: 96, height: 96, fit: "inside", withoutEnlargement: true })
-      .raw()
-      .toBuffer({ resolveWithObject: true })
-    const stride = info.channels
-    const pixels = []
-    for (let i = 0; i + 2 < data.length; i += stride) {
-      pixels.push({ r: data[i], g: data[i + 1], b: data[i + 2] })
-    }
-    deterministicPalette = extractPaletteFromPixels(pixels)
-    // Build a parallel RawPalette so we can fall back to assignRoles() if
-    // Gemini's palette doesn't match our deterministic hexes.
-    rawPalette = deterministicPalette.map((s) => ({
-      rgb: hexToRgb(s.hex),
-      hex: s.hex,
-      population: 1,
-    }))
-  } catch (e) {
-    console.error("[v0] /api/inspire palette decode failed:", e)
-    return Response.json({ error: "Couldn't decode that image." }, { status: 400 })
-  }
-
-  // 5) Upload to Blob if user-uploaded. OG keeps the source imageUrl.
+  // 4) Upload to Blob if user-uploaded (so the dashboard card has a thumbnail).
+  //    OG keeps the source imageUrl.
   let screenshotUrl: string
   if (sourceType === "image") {
     try {
@@ -175,79 +122,30 @@ export async function POST(req: Request) {
     screenshotUrl = sourceRef
   }
 
-  // 6) Multimodal Gemini call. Pre-extracted hex values are passed in as
-  //    text context — Gemini's job is to assign roles + names + the rest of
-  //    the signature, not to invent hex values from a thumbnail.
-  const palettePromptList = deterministicPalette
-    .map((s, i) => `  ${i + 1}. ${s.hex}`)
-    .join("\n")
-
-  const system = `You are Prism, a senior design director extracting a structured Signature from a single piece of visual reference.
-
-OUTPUT CONTRACT:
-- Fill every field in the schema. The Signature is consumed by a recommender that needs sharp, decisive answers.
-- The palette MUST contain exactly five swatches whose hex values are the five we extracted deterministically below — copy them verbatim. Your job is to assign one role and one short evocative name per swatch.
-  - Roles: 'bg' (background), 'fg' (foreground/text), 'accent' (brand/CTA), 'muted' (secondary surface), 'highlight' (loud detail). Each role appears exactly once.
-- Vibe and audience MUST come from the canonical enums in the schema. No improvisation.
-- contentSignature is one literal sentence: what does this site or image show?
-- vibeStatement is one short evocative phrase about the aesthetic. audienceStatement is one sentence on who this is for.
-- contentHooks: extract any actual headline / CTA / nav labels you can read in the image so a redesigned PreviewPane can read as 'same content, redone' rather than a sparse imitation. Skip any field you can't see.
-- libraryHints: 0–6 short library names that would be a fit (e.g. 'three.js', 'gsap', 'framer-motion', 'lenis'). Hints, not commitments.
-- brief: a self-contained 60–200 word designer-to-designer prompt that captures the inspiration so vividly another designer could rebuild a related site from it alone.
-- Avoid purple/violet roles unless the image is genuinely purple-led.`
-
-  const userText = `Extract a Signature from the attached image.
-
-DETERMINISTIC PALETTE (use these hex values verbatim, assign roles + names):
-${palettePromptList}
-
-Return the full Signature as structured output.`
-
-  let llmSignature: Omit<Signature, "source">
+  // 5) Run the canonical extraction pipeline (decode → palette → Gemini → drift guard).
+  let signature: Signature
   try {
-    const { output } = await generateText({
-      model: "google/gemini-3-flash",
-      output: Output.object({ schema: generationSchema }),
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: userText },
-            { type: "image", image: Buffer.from(bytes), mediaType },
-          ],
-        },
-      ],
-      system,
+    const result = await extractSignature({
+      imageBytes: bytes,
+      mediaType,
+      source: { type: sourceType, ref: sourceRef, hash: sourceHash },
     })
-    llmSignature = output as Omit<Signature, "source">
+    signature = result.signature
+    if (!result.paletteMatched) {
+      console.warn("[v0] /api/inspire palette drift; fell back to deterministic roles", {
+        owner: user.id,
+        sourceHash,
+      })
+    }
   } catch (e) {
-    console.error("[v0] /api/inspire LLM call failed:", e)
+    console.error("[v0] /api/inspire extractSignature failed:", e)
     return Response.json(
       { error: "Couldn't extract a signature from that image. Try a different one." },
       { status: 502 }
     )
   }
 
-  // 7) Validate palette: every hex must match a deterministic hex (case-insensitive).
-  //    If Gemini wandered, we keep its role/name semantics where possible by mapping
-  //    the closest deterministic hex; otherwise fall back to assignRoles().
-  const detSet = new Set(deterministicPalette.map((s) => s.hex.toLowerCase()))
-  const gemPalette = llmSignature.palette ?? []
-  const allMatched = gemPalette.length === 5 && gemPalette.every((s) => detSet.has(s.hex.toLowerCase()))
-  const allRolesPresent =
-    new Set(gemPalette.map((s) => s.role)).size === 5
-  const finalPalette: PaletteSwatch[] =
-    allMatched && allRolesPresent
-      ? gemPalette.map((s) => ({ ...s, hex: s.hex.toLowerCase() }))
-      : assignRoles(rawPalette)
-
-  // 8) Persist signature
-  const signature: Signature = {
-    ...llmSignature,
-    palette: finalPalette,
-    source: { type: sourceType, ref: sourceRef, hash: sourceHash },
-  }
-
+  // 6) Persist signature
   const { data: inserted, error: insertError } = await supabase
     .from("inspirations")
     .insert({

@@ -10,31 +10,18 @@
 //   5. Pre-flight quota   — read-only; debit only on full success
 //   6. Cache lookup       — per-owner (owner_id, source_hash) on inspirations
 //   7. Capture + scrape   — parallel; capture via lib/capture provider chain
-//   8. Decode + palette   — deterministic, fed INTO the multimodal call
-//   9. Signature          — generateText + Output.object(signatureSchema)
-//                           on Gemini 3 Flash, screenshot bytes inline
-//  10. Validate palette   — same drift guard as inspire route
-//  11. Persist            — write to inspirations(source_type='url')
-//  12. Consume quota      — success-only billing
+//   8. Signature          — extractSignature() (lib/extract-signature.ts)
+//   9. Persist            — write to inspirations(source_type='url')
+//  10. Consume quota      — success-only billing
 //
 // Variant generation is a separate roundtrip to /api/variants — keeps the
 // first paint fast (capture + signature ~10s; variants ~10s after).
 // ---------------------------------------------------------------------------
 
-import { generateText, Output } from "ai"
 import { createHash } from "node:crypto"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
-import {
-  signatureSchema,
-  type Signature,
-  type PaletteSwatch,
-} from "@/lib/signature"
-import {
-  extractPaletteFromPixels,
-  assignRoles,
-  type RawPalette,
-} from "@/lib/palette"
+import { type Signature } from "@/lib/signature"
 import { captureScreenshot } from "@/lib/capture"
 import { validateRebuildUrl, checkRobots } from "@/lib/url-guard"
 import { scrapeContent, type ScrapedContent } from "@/lib/scrape"
@@ -45,11 +32,11 @@ import {
   getClientIp,
   type QuotaStatus,
 } from "@/lib/ratelimit"
+import { extractSignature } from "@/lib/extract-signature"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
 
-const generationSchema = signatureSchema.omit({ source: true })
 const inputSchema = z.object({
   url: z.string().min(4).max(2048),
 })
@@ -189,8 +176,7 @@ export async function POST(req: Request) {
   const capture = captureResult.value
   const scrape = scrapeResult.status === "fulfilled" ? scrapeResult.value : null
 
-  // ── 8. Fetch screenshot bytes ONCE, then decode + palette ───────────────
-  // Reused for the multimodal call so we don't double-fetch the CDN URL.
+  // ── 8. Fetch screenshot bytes ONCE, then run the extraction pipeline. ────
   let screenshotBytes: ArrayBuffer
   try {
     const r = await fetch(capture.pngUrl)
@@ -205,103 +191,33 @@ export async function POST(req: Request) {
     )
   }
 
-  let rawPalette: RawPalette
-  let mediaType: string
-  let pixels: { r: number; g: number; b: number }[]
+  let signature: Signature
   try {
-    const sharp = (await import("sharp")).default
-    const meta = await sharp(Buffer.from(screenshotBytes)).metadata()
-    mediaType = `image/${meta.format ?? "png"}`
-    const { data, info } = await sharp(Buffer.from(screenshotBytes))
-      .flatten({ background: { r: 255, g: 255, b: 255 } })
-      .resize({ width: 96, height: 96, fit: "inside", withoutEnlargement: true })
-      .raw()
-      .toBuffer({ resolveWithObject: true })
-    const stride = info.channels
-    pixels = []
-    for (let i = 0; i + 2 < data.length; i += stride) {
-      pixels.push({ r: data[i]!, g: data[i + 1]!, b: data[i + 2]! })
-    }
-    rawPalette = extractPaletteFromPixels(pixels, { k: 5 })
-  } catch (e) {
-    return err(
-      "palette_failed",
-      "We captured the site but could not analyze its palette.",
-      502,
-      String(e),
-    )
-  }
-
-  const deterministicPalette: PaletteSwatch[] = assignRoles(rawPalette)
-  const palettePromptList = deterministicPalette
-    .map((s, i) => `  ${i + 1}. ${s.hex}`)
-    .join("\n")
-
-  // ── 9. Signature: structured multimodal call ────────────────────────────
-  const contentHint = scrape?.ok
-    ? [
-        scrape.content.title && `Title: ${scrape.content.title}`,
-        scrape.content.description && `Description: ${scrape.content.description}`,
-        scrape.content.h1 && `H1: ${scrape.content.h1}`,
-        scrape.content.navLabels.length > 0 &&
-          `Navigation: ${scrape.content.navLabels.join(" | ")}`,
-        scrape.content.sectionHeadlines.length > 0 &&
-          `Section headlines:\n  - ${scrape.content.sectionHeadlines.join("\n  - ")}`,
-        scrape.content.heroAlt && `Hero alt: ${scrape.content.heroAlt}`,
-        scrape.content.primaryCta && `Primary CTA: ${scrape.content.primaryCta}`,
-        scrape.content.bodyTextSample && `Body excerpt: ${scrape.content.bodyTextSample}`,
-      ]
-        .filter(Boolean)
-        .join("\n")
-    : "(content scrape failed — relying on screenshot only)"
-
-  const system = `You are Prism, a senior design director analyzing a captured website to produce a structured Signature.
-
-OUTPUT CONTRACT:
-- Fill every field in the schema. The Signature is consumed by a recommender that needs sharp, decisive answers.
-- The palette MUST contain exactly five swatches whose hex values are the five we extracted deterministically below — copy them verbatim. Your job is to assign one role and one short evocative name per swatch.
-  - Roles: 'bg' (background), 'fg' (foreground/text), 'accent' (brand/CTA), 'muted' (secondary surface), 'highlight' (loud detail). Each role appears exactly once.
-- 'vibe' must come from the canonical enum. 'audience' must come from the canonical enum. 'performanceHint' must come from the canonical enum (max | balanced | rich).
-- contentSignature: one literal sentence — what does this site DO?
-- vibeStatement: one short evocative phrase about the aesthetic.
-- audienceStatement: one sentence on who this is for, in plain product language.
-- contentHooks: extract REAL content from the scraped HTML below. Use the actual nav labels, section headlines, hero alt, and CTA — do NOT paraphrase. This is what makes the redesign read as "the same site, redone" instead of a sparse imitation.
-- libraryHints: 3–6 short tokens (e.g. 'three.js', 'gsap', 'framer-motion', 'lenis', 'tailwind').
-- motionLevel: 0=static, 1=subtle, 2=expressive, 3=cinematic.
-- brief: a self-contained 60–200 word designer-to-designer prompt that captures the site's purpose, audience, and signature visual qualities. This is what gets handed to recommend() verbatim.
-- Avoid purple/violet roles unless the source is genuinely purple-led.
-- Your goal is NOT to imitate the source pixel-for-pixel — it's to capture its essence so the redesign reads as a fresh interpretation.`
-
-  const userText = `Source URL: ${normalized}
-Hostname: ${hostname}
-
-DETERMINISTIC PALETTE (use these hex values verbatim, assign roles + names):
-${palettePromptList}
-
-EXTRACTED CONTENT (use the literal text where relevant):
-${contentHint}
-
-Analyze the attached screenshot together with the palette and content. Return the full Signature as structured output.`
-
-  let llmSignature: Omit<Signature, "source">
-  try {
-    const { output } = await generateText({
-      model: "google/gemini-3-flash",
-      output: Output.object({ schema: generationSchema }),
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: userText },
-            { type: "image", image: Buffer.from(screenshotBytes), mediaType },
-          ],
-        },
-      ],
-      system,
+    const result = await extractSignature({
+      imageBytes: screenshotBytes,
+      source: { type: "url", ref: normalized, hash: sourceHash, hostname },
+      scraped: scrape?.ok
+        ? {
+            title: scrape.content.title,
+            description: scrape.content.description,
+            h1: scrape.content.h1,
+            navLabels: scrape.content.navLabels,
+            sectionHeadlines: scrape.content.sectionHeadlines,
+            heroAlt: scrape.content.heroAlt,
+            primaryCta: scrape.content.primaryCta,
+            bodyTextSample: scrape.content.bodyTextSample,
+          }
+        : null,
     })
-    llmSignature = output as Omit<Signature, "source">
+    signature = result.signature
+    if (!result.paletteMatched) {
+      console.warn("[v0] /api/rebuild palette drift; fell back to deterministic roles", {
+        owner: user.id,
+        url: normalized,
+      })
+    }
   } catch (e) {
-    console.error("[v0] /api/rebuild LLM call failed:", e)
+    console.error("[v0] /api/rebuild extractSignature failed:", e)
     return err(
       "signature_failed",
       "Captured the site but could not analyze it. Try again in a moment.",
@@ -310,24 +226,7 @@ Analyze the attached screenshot together with the palette and content. Return th
     )
   }
 
-  // ── 10. Palette drift guard (same as inspire route) ─────────────────────
-  const detSet = new Set(deterministicPalette.map((s) => s.hex.toLowerCase()))
-  const gemPalette = llmSignature.palette ?? []
-  const allMatched =
-    gemPalette.length === 5 && gemPalette.every((s) => detSet.has(s.hex.toLowerCase()))
-  const allRolesPresent = new Set(gemPalette.map((s) => s.role)).size === 5
-  const finalPalette: PaletteSwatch[] =
-    allMatched && allRolesPresent
-      ? gemPalette.map((s) => ({ ...s, hex: s.hex.toLowerCase() }))
-      : assignRoles(rawPalette)
-
-  // ── 11. Persist ──────────────────────────────────────────────────────────
-  const signature: Signature = {
-    ...llmSignature,
-    palette: finalPalette,
-    source: { type: "url", ref: normalized, hash: sourceHash },
-  }
-
+  // ── 9. Persist ───────────────────────────────────────────────────────────
   const insert = await supabase
     .from("inspirations")
     .insert({
@@ -351,7 +250,7 @@ Analyze the attached screenshot together with the palette and content. Return th
     )
   }
 
-  // ── 12. Consume quota (success-only billing) ────────────────────────────
+  // ── 10. Consume quota (success-only billing) ────────────────────────────
   const postQuota = await consumeRebuildQuota(user.id)
 
   return Response.json({
