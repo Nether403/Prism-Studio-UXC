@@ -47,6 +47,9 @@ export function NavShell({ authSlot }: { authSlot: ReactNode }) {
           <Link href="/library" className="hover:text-foreground transition" data-cursor="hover">
             Library
           </Link>
+          <Link href="/about" className="hover:text-foreground transition" data-cursor="hover">
+            About
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2">

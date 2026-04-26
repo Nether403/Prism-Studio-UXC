@@ -44,6 +44,11 @@ export function Footer() {
                   Library
                 </a>
               </li>
+              <li>
+                <a href="/about" className="hover:text-primary transition">
+                  About
+                </a>
+              </li>
             </ul>
           </div>
 
