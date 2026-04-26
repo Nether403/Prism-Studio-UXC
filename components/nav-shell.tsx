@@ -38,6 +38,13 @@ export function NavShell({ authSlot }: { authSlot: ReactNode }) {
           <Link href="/#generator" className="hover:text-foreground transition" data-cursor="hover">
             Generator
           </Link>
+          <Link
+            href="/from-image"
+            className="hover:text-foreground transition"
+            data-cursor="hover"
+          >
+            From image
+          </Link>
           <Link href="/recipes" className="hover:text-foreground transition" data-cursor="hover">
             Recipes
           </Link>
