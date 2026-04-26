@@ -86,6 +86,11 @@ export async function POST(req: Request) {
     return err("unauthenticated", "You must be signed in to rebuild a site.", 401)
   }
 
+  // Phase 5 escape hatch — `?force=1` skips the public cache lookup so the
+  // user can demand a fresh capture even if someone else has already
+  // captured this URL publicly.
+  const force = new URL(req.url).searchParams.get("force") === "1"
+
   // ── 2. Rate limit (per-IP backstop) ──────────────────────────────────────
   const ip = getClientIp(req)
   const rl = await rebuildRateLimit.limit(ip)
@@ -157,6 +162,67 @@ export async function POST(req: Request) {
       cached: true,
       generatedStackId: cached.data.generated_stack_id,
     } satisfies RebuildSuccess)
+  }
+
+  // ── 6.5 Public cache lookup ──────────────────────────────────────────────
+  //
+  // Phase 5: cross-user reuse. If someone else has rebuilt this URL and
+  // marked the resulting inspiration public, we clone the signature into
+  // an owned row, bump cache_hit_count on the parent, and skip the
+  // capture/extract pipeline entirely. This also DOESN'T consume the
+  // user's daily quota — cached responses are free.
+  //
+  // `?force=1` opts out, for when the public version is stale.
+  if (!force) {
+    const { data: publicHit } = await supabase
+      .from("inspirations")
+      .select("id, signature, screenshot_url, source_ref, cache_hit_count")
+      .eq("source_hash", sourceHash)
+      .eq("is_public", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (publicHit?.signature) {
+      const { data: cloned, error: cloneErr } = await supabase
+        .from("inspirations")
+        .insert({
+          owner_id: user.id,
+          source_type: "url",
+          source_ref: publicHit.source_ref,
+          source_hash: sourceHash,
+          screenshot_url: publicHit.screenshot_url,
+          signature: publicHit.signature as Record<string, unknown>,
+          parent_inspiration_id: publicHit.id,
+          is_public: false,
+        })
+        .select("id")
+        .single()
+
+      if (!cloneErr && cloned) {
+        const { data: bumped } = await supabase.rpc("bump_cache_hit", {
+          p_inspiration_id: publicHit.id,
+        })
+        const cacheHits =
+          typeof bumped === "number" ? bumped : (publicHit.cache_hit_count ?? 0) + 1
+
+        return Response.json({
+          inspirationId: cloned.id,
+          signature: publicHit.signature as unknown as Signature,
+          screenshot: publicHit.screenshot_url
+            ? { url: publicHit.screenshot_url, width: 1280, height: 800 }
+            : null,
+          content: null,
+          watermark: makeWatermark(hostname),
+          quota: preQuota,
+          cached: true,
+          cachedFromPublic: true,
+          parentInspirationId: publicHit.id,
+          cacheHits,
+        } satisfies RebuildSuccess)
+      }
+      console.warn("[v0] /api/rebuild public-cache clone failed; falling back:", cloneErr)
+    }
   }
 
   // ── 7. Capture + scrape in parallel ──────────────────────────────────────
@@ -281,4 +347,11 @@ export type RebuildSuccess = {
   quota: QuotaStatus
   cached: boolean
   generatedStackId?: string | null
+  /** Set when the cached payload originated from a public capture by
+   *  another user (Phase 5 cross-user cache hit). */
+  cachedFromPublic?: boolean
+  /** The public inspiration row this response was cloned from. */
+  parentInspirationId?: string
+  /** Updated cache_hit_count on the public parent after this hit. */
+  cacheHits?: number
 }

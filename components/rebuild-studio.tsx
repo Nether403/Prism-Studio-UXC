@@ -27,6 +27,10 @@ type RebuildResult = {
   watermark: { label: string; sourceHostname: string; disclaimer: string }
   quota: QuotaStatus
   cached: boolean
+  /** Phase 5: payload was reused from a public capture by another user. */
+  cachedFromPublic?: boolean
+  /** Updated cache_hit_count after this hit, when cached from public. */
+  cacheHits?: number
 }
 
 export function RebuildStudio({
@@ -52,13 +56,25 @@ export function RebuildStudio({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
+    await runRebuild({ force: false })
+  }
+
+  /**
+   * Submit the current URL to /api/rebuild.
+   *
+   * `force` appends ?force=1 so the API skips the cross-user public cache
+   * lookup and runs a fresh capture. Used by the "Capture fresh anyway"
+   * button when the cached-from-public reinterpretation feels stale.
+   */
+  async function runRebuild({ force }: { force: boolean }) {
     setError(null)
     if (!url.trim()) return
 
     setSubmitting(true)
     setResult(null)
     try {
-      const res = await fetch("/api/rebuild", {
+      const endpoint = force ? "/api/rebuild?force=1" : "/api/rebuild"
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url: url.trim() }),
@@ -207,6 +223,50 @@ export function RebuildStudio({
       {/* Result */}
       {result && (
         <div className="space-y-8">
+          {/* Phase 5 — cached-from-public banner. Shown only when the
+              backend reused a signature captured by another user. The
+              "Capture fresh" button re-submits with ?force=1 so the user
+              can override a stale public reinterpretation. */}
+          {result.cachedFromPublic && (
+            <div className="flex flex-col gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Cached from a public capture</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Reusing a signature another Prism user already published for this URL.
+                    {typeof result.cacheHits === "number" && result.cacheHits > 0 && (
+                      <>
+                        {" "}
+                        <span className="font-mono tabular-nums">{result.cacheHits}</span>{" "}
+                        {result.cacheHits === 1 ? "rebuild" : "rebuilds"} so far.
+                      </>
+                    )}{" "}
+                    No quota was used.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => runRebuild({ force: true })}
+                disabled={submitting || !quota.ok}
+                className="shrink-0"
+                data-cursor="hover"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Capturing
+                  </>
+                ) : (
+                  "Capture fresh anyway"
+                )}
+              </Button>
+            </div>
+          )}
+
           {/* Side-by-side: original | reinterpretation */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <OriginalPanel
@@ -218,6 +278,7 @@ export function RebuildStudio({
               hostname={result.watermark.sourceHostname}
               disclaimer={result.watermark.disclaimer}
               cached={result.cached}
+              cachedFromPublic={result.cachedFromPublic ?? false}
             />
           </div>
 
@@ -372,19 +433,28 @@ function ReinterpretationPanel({
   hostname,
   disclaimer,
   cached,
+  cachedFromPublic,
 }: {
   signature: Signature
   hostname: string
   disclaimer: string
   cached: boolean
+  cachedFromPublic: boolean
 }) {
   const bg = signature.palette.find((p) => p.role === "bg")?.hex ?? "#0b0b0c"
   const fg = signature.palette.find((p) => p.role === "fg")?.hex ?? "#f5f5f5"
   const accent = signature.palette.find((p) => p.role === "accent")?.hex ?? "#7aff8a"
+  // Caption is purely informational — surface the strongest provenance
+  // signal the API gave us (public reuse > owner cache > fresh).
+  const captionLabel = cachedFromPublic
+    ? "Prism reinterpretation · cached from public"
+    : cached
+      ? "Prism reinterpretation · cached"
+      : "Prism reinterpretation"
   return (
     <figure className="space-y-2">
       <figcaption className="flex items-center justify-between font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        <span>{cached ? "Prism reinterpretation · cached" : "Prism reinterpretation"}</span>
+        <span>{captionLabel}</span>
         <span>{signature.vibe} · {signature.layoutPattern}</span>
       </figcaption>
       <div

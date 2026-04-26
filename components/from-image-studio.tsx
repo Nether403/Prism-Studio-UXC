@@ -58,16 +58,37 @@ export function FromImageStudio({ userEmail }: { userEmail: string | null }) {
   const [inspirationId, setInspirationId] = useState<string | null>(null)
   const [editedBrief, setEditedBrief] = useState<string>("")
   const [ogUrl, setOgUrl] = useState("")
+  /**
+   * Phase 5: when set, the most recent /api/inspire response was reused
+   * from a public capture by another user. Drives the "Cached from
+   * public capture" chip + "Capture fresh anyway" CTA.
+   */
+  const [cachedFromPublic, setCachedFromPublic] = useState<{
+    hits: number
+  } | null>(null)
+  /**
+   * Last submitted input — kept around so the "Capture fresh anyway"
+   * button can re-run the exact same payload with force=1 without
+   * making the user re-pick the file or re-paste the OG URL.
+   */
+  const lastInputRef = useRef<{ file?: File; ogUrl?: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
 
   // Submit either a File or an ogUrl. Exactly one of the two should be set.
   const submit = useCallback(
-    async (input: { file?: File; ogUrl?: string }) => {
+    async (input: { file?: File; ogUrl?: string; force?: boolean }) => {
       setPhase("extracting")
       setError(null)
       setSignature(null)
       setInspirationId(null)
+      setCachedFromPublic(null)
+
+      // Cache the first form of the input so a follow-up force=1 retry
+      // can replay it. Don't overwrite when this *is* the retry.
+      if (!input.force) {
+        lastInputRef.current = { file: input.file, ogUrl: input.ogUrl }
+      }
 
       if (input.file) {
         const url = URL.createObjectURL(input.file)
@@ -81,10 +102,17 @@ export function FromImageStudio({ userEmail }: { userEmail: string | null }) {
         if (input.file) form.set("file", input.file)
         if (input.ogUrl) form.set("ogUrl", input.ogUrl)
 
-        const res = await fetch("/api/inspire", { method: "POST", body: form })
+        const endpoint = input.force ? "/api/inspire?force=1" : "/api/inspire"
+        const res = await fetch(endpoint, { method: "POST", body: form })
         const json = (await res.json().catch(() => ({}))) as
           | { error: string }
-          | { inspirationId: string | null; signature: Signature; cached: boolean }
+          | {
+              inspirationId: string | null
+              signature: Signature
+              cached: boolean
+              cachedFromPublic?: boolean
+              cacheHits?: number
+            }
 
         if (!res.ok || "error" in json) {
           throw new Error("error" in json ? json.error : "Couldn't read that image.")
@@ -98,7 +126,12 @@ export function FromImageStudio({ userEmail }: { userEmail: string | null }) {
         }
         setPhase("ready")
 
-        if (json.cached) {
+        if (json.cachedFromPublic) {
+          setCachedFromPublic({ hits: json.cacheHits ?? 0 })
+          toast.info("Cached from public capture", {
+            description: "Reusing a signature another Prism user already published.",
+          })
+        } else if (json.cached) {
           toast.info("Pulled from cache", {
             description: "We've seen this image before — instant signature.",
           })
@@ -153,6 +186,8 @@ export function FromImageStudio({ userEmail }: { userEmail: string | null }) {
     setEditedBrief("")
     setError(null)
     setOgUrl("")
+    setCachedFromPublic(null)
+    lastInputRef.current = null
     setPhase("idle")
   }
 
@@ -434,6 +469,46 @@ export function FromImageStudio({ userEmail }: { userEmail: string | null }) {
       </div>
 
       <div className="flex flex-col gap-4">
+        {/* Phase 5 — cached-from-public chip + force-fresh CTA. The
+            backend cloned a public user's signature instead of running
+            Gemini, so surface that explicitly and let the user demand a
+            fresh extract if the public version feels off-brand. */}
+        {cachedFromPublic && (
+          <Card className="flex flex-col gap-3 border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Cached from a public capture</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Reusing a signature another Prism user already published.
+                  {cachedFromPublic.hits > 0 && (
+                    <>
+                      {" "}
+                      <span className="font-mono tabular-nums">{cachedFromPublic.hits}</span>{" "}
+                      {cachedFromPublic.hits === 1 ? "reuse" : "reuses"} so far.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const last = lastInputRef.current
+                if (!last) return
+                void submit({ ...last, force: true })
+              }}
+              disabled={phase === "saving" || !lastInputRef.current}
+              className="shrink-0"
+              data-cursor="hover"
+            >
+              Capture fresh anyway
+            </Button>
+          </Card>
+        )}
+
         <SignatureCard signature={signature} />
 
         <Card className="flex flex-col gap-3 p-5">
