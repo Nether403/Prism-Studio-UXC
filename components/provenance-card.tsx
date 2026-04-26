@@ -14,6 +14,7 @@ import Image from "next/image"
 import { ExternalLink, Globe, ImageIcon, Lock, ScrollText, Sparkles } from "lucide-react"
 import type { Signature, SourceType } from "@/lib/signature"
 import { InspirationPrivacyToggle } from "@/components/inspiration-privacy-toggle"
+import { MoreLikeThis } from "@/components/more-like-this"
 
 export type ProvenanceCardProps = {
   inspiration: {
@@ -199,6 +200,15 @@ export function ProvenanceCard({ inspiration, isOwner }: ProvenanceCardProps) {
             )}
           </div>
         </div>
+
+        {/*
+          Owner-only "More like this" — fires the variants pipeline against
+          the stored signature and lets the owner save any of the three
+          alternative directions as a new lineage-linked stack. Hidden for
+          non-owners because saving requires write access to the parent's
+          inspiration row anyway.
+        */}
+        {isOwner && signature && <MoreLikeThis inspirationId={inspiration.id} />}
       </div>
     </section>
   )

@@ -37,15 +37,22 @@ inspiration loop feels complete."
 
 ### Phase 3 — Variants from inspirations
 
-- [ ] Wire `/api/variants` to accept an `inspirationId` and condition
-      its re-roll on the source signature, not just the generated stack.
-- [ ] Add a "More like this" button to `<ProvenanceCard>` that fires
-      `/api/variants` with the source signature attached, then renders
-      a horizontal strip of 3 alternative stacks.
-- [ ] Persist variants as `inspirations.parent_inspiration_id` so the
-      lineage survives forks.
+- [x] Wire `/api/variants` to accept an `inspirationId` and condition
+      its re-roll on the source signature (palette, fonts, vibe statement,
+      library hints), not just the generated stack.
+- [x] Add a "More like this" button to `<ProvenanceCard>` that fires
+      `/api/variants` and renders a 3-card grid of alternative stacks
+      (`<MoreLikeThis>` component).
+- [x] Persist variants as `inspirations.parent_inspiration_id` (migration
+      `005_inspiration_lineage.sql`) so each saved variant gets its own
+      inspiration row pointing back to the parent capture.
 - [ ] Eval coverage: variant diversity score (palette delta, font delta,
       stack-id Jaccard distance) added to `scripts/evals/`.
+- [ ] Surface a "variant of …" breadcrumb on `/s/[id]` when the showing
+      stack's inspiration has a `parent_inspiration_id`, with a link to
+      the source.
+- [ ] Render lineage trees on `/dashboard` — group variants under their
+      parent in the captures strip.
 
 ### Phase 4 — Public inspiration gallery
 
@@ -149,6 +156,11 @@ Things we'd love to try but haven't committed to.
 
 ## Done (recent)
 
+- 2026-04 — Phase 3 v1 — variants from inspirations. `/api/variants`
+  now accepts `inspirationId` and seeds every variant from the stored
+  signature; `<MoreLikeThis>` renders an owner-only 3-card strip on
+  the share page; `saveVariantFromInspiration` writes the new stack
+  with full `parent_inspiration_id` lineage.
 - 2026-04 — Page-unresponsive triage: lazy theme fonts, scene
   perf-pass (600 stars, no HDRI), IntersectionObserver gate, rAF
   cursor, `?nofx=1` escape hatch.
