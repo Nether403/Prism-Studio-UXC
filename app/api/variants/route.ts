@@ -12,6 +12,14 @@ const inputSchema = z.object({
   vibe: z.enum(["minimal", "bold", "editorial", "playful", "experimental"]),
   audience: z.enum(["consumer", "enterprise", "developer", "creative"]),
   includePaid: z.boolean(),
+  /**
+   * Optional motion tolerance from the slider. Each variant gets its own
+   * effective motionLevel — performance mode clamps to min(level, 1),
+   * maximalist clamps to max(level, 2). Default 2 when omitted.
+   */
+  motionLevel: z
+    .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
+    .optional(),
 })
 
 type Mode = "performance" | "balanced" | "maximalist"
@@ -67,12 +75,21 @@ export async function POST(req: Request) {
   // composition.
   const variants = await Promise.all(
     MODES.map(async (mode) => {
+      const userMotion = baseInput.motionLevel ?? 2
+      const effectiveMotion: 0 | 1 | 2 | 3 =
+        mode.id === "performance"
+          ? (Math.min(userMotion, 1) as 0 | 1)
+          : mode.id === "maximalist"
+            ? (Math.max(userMotion, 2) as 2 | 3)
+            : userMotion
+
       const input: GeneratorInput = {
         prompt: baseInput.prompt,
         vibe: mode.vibeShift ?? baseInput.vibe,
         audience: baseInput.audience,
         performance: mode.perf,
         includePaid: baseInput.includePaid,
+        motionLevel: effectiveMotion,
       }
 
       // Recommend with mode constraints

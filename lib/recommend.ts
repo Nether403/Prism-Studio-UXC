@@ -3,6 +3,16 @@ import { LIBRARIES, type Library } from "./stack-data"
 export type Vibe = "minimal" | "bold" | "editorial" | "playful" | "experimental"
 export type Audience = "consumer" | "enterprise" | "developer" | "creative"
 export type Performance = "max" | "balanced" | "rich"
+/**
+ * Motion tolerance — how much animation the user can stomach.
+ *   0  reduced motion (no GSAP, no Three motion, Lenis disabled)
+ *   1  subtle (Lenis ok, gentle GSAP, no Three)
+ *   2  expressive (default — GSAP yes, Three sparingly)
+ *   3  maximum (full Three + GSAP + physics)
+ *
+ * Maps onto `prefers-reduced-motion` on the client when 0.
+ */
+export type MotionLevel = 0 | 1 | 2 | 3
 
 export type GeneratorInput = {
   prompt: string
@@ -10,7 +20,14 @@ export type GeneratorInput = {
   audience: Audience
   performance: Performance
   includePaid: boolean
+  /** Defaults to 2 (expressive) when omitted for backward compat. */
+  motionLevel?: MotionLevel
 }
+
+/** Library ids that are "motion-heavy" — used by the Motion slider to gate. */
+const MOTION_HEAVY = new Set(["gsap", "threejs", "react-three-fiber", "rapier"])
+const MOTION_THREE_ONLY = new Set(["threejs", "react-three-fiber", "rapier"])
+const MOTION_SCROLL = new Set(["lenis"])
 
 export type ScoredLibrary = Library & {
   score: number
@@ -66,12 +83,22 @@ export function recommend(input: GeneratorInput): Recommendation {
   const inferred = inferTags(input.prompt)
   const vibeTags = VIBE_TAGS[input.vibe]
   const targetTags = new Set([...inferred, ...vibeTags])
+  const motionLevel: MotionLevel = input.motionLevel ?? 2
 
   // Always include framework + styling foundation
   const required = new Set(["nextjs", "tailwind"])
 
   const scored: ScoredLibrary[] = LIBRARIES.map((lib) => {
     if (!input.includePaid && lib.requiresAuth) {
+      return { ...lib, score: -Infinity, reasons: [] }
+    }
+
+    // Motion gate — stricter than scoring, hard-excludes ineligible libraries
+    // before they can win their category.
+    if (motionLevel === 0 && (MOTION_HEAVY.has(lib.id) || MOTION_SCROLL.has(lib.id))) {
+      return { ...lib, score: -Infinity, reasons: [] }
+    }
+    if (motionLevel === 1 && MOTION_THREE_ONLY.has(lib.id)) {
       return { ...lib, score: -Infinity, reasons: [] }
     }
 
@@ -106,6 +133,16 @@ export function recommend(input: GeneratorInput): Recommendation {
     }
     if (input.audience === "developer" && lib.category === "ui") {
       score += 4
+    }
+
+    // Motion-level scoring tweaks (level 0/1 are filtered above; this handles 1, 2, 3)
+    if (motionLevel === 1 && MOTION_HEAVY.has(lib.id)) {
+      score -= 12
+      reasons.push("subtle motion only")
+    }
+    if (motionLevel === 3 && (lib.category === "motion" || lib.category === "3d")) {
+      score += 6
+      reasons.push("maximum motion")
     }
 
     // Always-on baselines
