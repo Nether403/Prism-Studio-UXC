@@ -15,7 +15,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowUpRight, Globe, ImageIcon, Lock, ScrollText } from "lucide-react"
+import { ArrowUpRight, GitBranch, Globe, ImageIcon, Lock, ScrollText } from "lucide-react"
 import type { Signature, SourceType } from "@/lib/signature"
 import { InspirationPrivacyToggle } from "@/components/inspiration-privacy-toggle"
 
@@ -28,6 +28,28 @@ export type ProvenanceInspiration = {
   generated_stack_id: string | null
   is_public: boolean
   created_at: string
+  /**
+   * v9 lineage column — when set, this row is a "More like this" variant
+   * derived from another inspiration. The strip uses this to render variants
+   * adjacent to their parent and to badge them with a "Variant of …" hint.
+   */
+  parent_inspiration_id?: string | null
+}
+
+/**
+ * Pointer used by `ProvenanceThumb` to render the "Variant of …" hint when
+ * a row is a lineage descendant whose parent is also in the same strip.
+ * Kept minimal so callers don't have to forward the full parent row.
+ */
+export type VariantOfHint = {
+  /** Parent inspiration id — used as the parent-thumb anchor target. */
+  parentId: string
+  /** Short label for the badge — usually the parent's hostname or filename. */
+  label: string
+  /** This variant's 1-indexed position among its parent's children. */
+  index: number
+  /** Total number of variants this parent has in the current strip. */
+  total: number
 }
 
 export type ProvenanceStripProps = {
@@ -54,6 +76,61 @@ export function ProvenanceStrip({
 }: ProvenanceStripProps) {
   if (inspirations.length === 0) return null
 
+  // ---------------------------------------------------------------------
+  // Lineage grouping (v9 / Phase 3).
+  //
+  // We re-order the strip so each variant sits immediately after its parent.
+  // Roots are emitted in chronological order (newest first); within a root,
+  // children are emitted oldest → newest so the variant numbering reads
+  // naturally ("Variant 1" is the first re-roll, "Variant N" is the latest).
+  //
+  // A row whose `parent_inspiration_id` points outside the fetched set is
+  // treated as a root in this view — we can't render a "Variant of …" badge
+  // we can't anchor, and the user usually still wants to see it as a
+  // first-class capture in their workspace.
+  // ---------------------------------------------------------------------
+  const idsInSet = new Set(inspirations.map((i) => i.id))
+  const childrenByParent = new Map<string, ProvenanceInspiration[]>()
+  const roots: ProvenanceInspiration[] = []
+
+  for (const insp of inspirations) {
+    const parentId = insp.parent_inspiration_id
+    if (parentId && idsInSet.has(parentId)) {
+      const arr = childrenByParent.get(parentId) ?? []
+      arr.push(insp)
+      childrenByParent.set(parentId, arr)
+    } else {
+      roots.push(insp)
+    }
+  }
+
+  // Roots already arrive newest-first from the page-level query; we keep
+  // that order. Children: oldest → newest so badge numbering is intuitive.
+  for (const arr of childrenByParent.values()) {
+    arr.sort((a, b) => a.created_at.localeCompare(b.created_at))
+  }
+
+  type StripItem = { insp: ProvenanceInspiration; variantOf: VariantOfHint | null }
+  const ordered: StripItem[] = []
+  for (const root of roots) {
+    ordered.push({ insp: root, variantOf: null })
+    const kids = childrenByParent.get(root.id) ?? []
+    const total = kids.length
+    kids.forEach((child, i) => {
+      ordered.push({
+        insp: child,
+        variantOf: {
+          parentId: root.id,
+          label: parentLabel(root),
+          index: i + 1,
+          total,
+        },
+      })
+    })
+  }
+
+  const variantTotal = inspirations.length - roots.length
+
   return (
     <section aria-labelledby="provenance-strip-heading" className="space-y-4">
       <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
@@ -63,6 +140,13 @@ export function ProvenanceStrip({
         <span className="ml-2 text-foreground/70 tabular-nums normal-case">
           {inspirations.length}
         </span>
+        {variantTotal > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/40 px-2 py-0.5 normal-case tracking-wider text-muted-foreground">
+            <GitBranch className="h-2.5 w-2.5" aria-hidden />
+            <span className="tabular-nums text-foreground/80">{variantTotal}</span>
+            <span>variant{variantTotal === 1 ? "" : "s"}</span>
+          </span>
+        )}
       </div>
 
       {/*
@@ -74,8 +158,8 @@ export function ProvenanceStrip({
         className="-mx-6 overflow-x-auto px-6 pb-2 [scrollbar-width:thin] snap-x snap-mandatory"
         role="list"
       >
-        <ul className="flex gap-3 w-max">
-          {inspirations.map((insp) => (
+        <ul className="flex gap-3 w-max items-start">
+          {ordered.map(({ insp, variantOf }) => (
             <li key={insp.id} className="snap-start" role="listitem">
               <ProvenanceThumb
                 inspiration={insp}
@@ -83,6 +167,7 @@ export function ProvenanceStrip({
                   insp.generated_stack_id ? stacksById[insp.generated_stack_id] ?? null : null
                 }
                 editable={editable}
+                variantOf={variantOf}
               />
             </li>
           ))}
@@ -92,21 +177,45 @@ export function ProvenanceStrip({
   )
 }
 
+/**
+ * Short, human-friendly label for a parent inspiration — used in the
+ * "Variant of …" badge on child thumbs.
+ */
+function parentLabel(parent: ProvenanceInspiration): string {
+  if (parent.source_type === "url" || parent.source_type === "og") {
+    try {
+      return new URL(parent.source_ref).hostname.replace(/^www\./, "")
+    } catch {
+      return parent.source_ref
+    }
+  }
+  if (parent.source_type === "image") return "image"
+  return "notes"
+}
+
 type ProvenanceThumbProps = {
   inspiration: ProvenanceInspiration
   linkedStack: { title: string | null; headline: string } | null
   /** Render an interactive privacy toggle when the viewer owns this row. */
   editable?: boolean
+  /**
+   * When set, renders this thumb as a lineage descendant — adds a "Variant
+   * N/M of {label}" badge on the media area and a thin primary-tinted left
+   * border to visually nest it next to its parent in the strip.
+   */
+  variantOf?: VariantOfHint | null
 }
 
 export function ProvenanceThumb({
   inspiration,
   linkedStack,
   editable = false,
+  variantOf = null,
 }: ProvenanceThumbProps) {
   const { id, source_type, source_ref, screenshot_url, signature, generated_stack_id, is_public } =
     inspiration
   const SourceIcon = SOURCE_ICONS[source_type]
+  const isVariant = Boolean(variantOf)
 
   // The destination depends on whether the inspiration produced a stack.
   // Linked → deep-link to the share page. Pending → resume in the originating
@@ -141,16 +250,27 @@ export function ProvenanceThumb({
   //   3. interactive overlays (privacy toggle) at z-20 that sit above the
   //      stretched link and capture their own clicks.
   // ---------------------------------------------------------------------
+  // Variant lineage cue: a thin primary-tinted left rail + a slightly
+  // narrower card so a row of "parent + variants" reads as one nested unit
+  // in the horizontal scroller without breaking the existing card grid.
+  const variantClasses = isVariant
+    ? "w-[200px] border-l-2 border-l-primary/60"
+    : "w-[220px]"
+
   return (
     <div
-      className={`group relative block w-[220px] overflow-hidden rounded-lg border bg-card/40 transition hover:border-foreground/30 hover:bg-card ${
+      className={`group relative block overflow-hidden rounded-lg border bg-card/40 transition hover:border-foreground/30 hover:bg-card ${variantClasses} ${
         isLinked ? "border-border" : "border-dashed border-border"
       }`}
     >
       <Link
         href={href}
         data-cursor="hover"
-        aria-label={`${SOURCE_LABELS[source_type]}: ${caption}. ${hint}.`}
+        aria-label={
+          isVariant
+            ? `Variant ${variantOf!.index} of ${variantOf!.total} from ${variantOf!.label}: ${caption}. ${hint}.`
+            : `${SOURCE_LABELS[source_type]}: ${caption}. ${hint}.`
+        }
         className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <span className="sr-only">{caption}</span>
@@ -199,7 +319,17 @@ export function ProvenanceThumb({
           )
         )}
 
-        {!isLinked && (
+        {isVariant && (
+          <span
+            className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-primary/90 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-primary-foreground backdrop-blur"
+            title={`Variant ${variantOf!.index} of ${variantOf!.total} from ${variantOf!.label}`}
+          >
+            <GitBranch className="h-2.5 w-2.5" aria-hidden />
+            {variantOf!.index}/{variantOf!.total}
+          </span>
+        )}
+
+        {!isLinked && !isVariant && (
           <span className="absolute bottom-2 right-2 rounded-full bg-background/85 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-primary backdrop-blur">
             Pending
           </span>
@@ -212,7 +342,7 @@ export function ProvenanceThumb({
             {caption}
           </div>
           <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            {hint}
+            {isVariant ? `Variant of ${variantOf!.label}` : hint}
           </div>
         </div>
         <ArrowUpRight

@@ -27,6 +27,8 @@ import {
   ArrowUpRight,
   SlidersHorizontal,
   Layers,
+  Flame,
+  Palette,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
@@ -39,12 +41,36 @@ export type PublicInspiration = {
   screenshot_url: string | null
   signature: Signature | null
   generated_stack_id: string | null
+  /**
+   * Phase 5 cross-user cache counter — set on the public parent every time
+   * /api/rebuild or /api/inspire serves a cached payload from this row.
+   * Drives the "Popular" tab sort and the per-card reuses badge.
+   */
+  cache_hit_count: number
   created_at: string
   /** Linked stack metadata (joined server-side; nullable). */
   stack: { id: string; headline: string; title: string | null } | null
 }
 
-type Tab = "newest" | "with-stack" | "captures"
+type Tab = "newest" | "popular" | "with-stack" | "captures"
+
+// ---------------------------------------------------------------------------
+// Hue clustering — Phase 4 dominant-hue filter.
+//
+// We bucket the first palette swatch (the canonical "dominant" colour in
+// Signature) into one of five UI clusters. Low-saturation rows always land
+// in `mono` regardless of hue so a cool-grey blue doesn't get filed under
+// "Cool" alongside actual blues.
+// ---------------------------------------------------------------------------
+type HueBucket = "warm" | "sun" | "cool" | "purple" | "mono"
+
+const HUE_OPTIONS: Array<{ id: HueBucket; label: string }> = [
+  { id: "warm", label: "Warm" },
+  { id: "sun", label: "Sun" },
+  { id: "cool", label: "Cool" },
+  { id: "purple", label: "Purple" },
+  { id: "mono", label: "Mono" },
+]
 
 const SOURCE_OPTIONS: Array<{ id: SourceType; label: string }> = [
   { id: "url", label: "URL" },
@@ -72,6 +98,7 @@ export function InspirationsFeed({
 
   const tab = (params.get("tab") as Tab) || "newest"
   const source = (params.get("source") as SourceType | null) || null
+  const hue = (params.get("hue") as HueBucket | null) || null
 
   // Live state — kept in sync with new inserts via the realtime channel.
   const [items, setItems] = useState<PublicInspiration[]>(initial)
@@ -97,6 +124,9 @@ export function InspirationsFeed({
             signature: (row.signature as Signature | null) ?? null,
             generated_stack_id:
               (row.generated_stack_id as string | null) ?? null,
+            // Fresh inserts always start at 0 — cache hits get bumped via
+            // the bump_cache_hit() RPC, which fires UPDATE not INSERT.
+            cache_hit_count: Number(row.cache_hit_count ?? 0),
             created_at: String(row.created_at ?? new Date().toISOString()),
             // Realtime payload is the raw row — no joined stack metadata.
             // The card falls back to a generic "Captured" caption for new
@@ -114,13 +144,37 @@ export function InspirationsFeed({
     }
   }, [])
 
+  // Pre-bucket every item once per items change so the chip counts and the
+  // hue filter both share the same map without re-computing HSL on every
+  // render. Items without a signature land in `mono` by default (matches
+  // the bucketHue contract below).
+  const bucketsById = useMemo(() => {
+    const map = new Map<string, HueBucket>()
+    for (const i of items) {
+      map.set(i.id, bucketHueFromSignature(i.signature))
+    }
+    return map
+  }, [items])
+
   const filtered = useMemo(() => {
     let list = items
     if (source) list = list.filter((i) => i.source_type === source)
+    if (hue) list = list.filter((i) => bucketsById.get(i.id) === hue)
+    if (tab === "popular") {
+      list = list
+        .filter((i) => i.cache_hit_count > 0)
+        .slice()
+        .sort((a, b) => {
+          if (b.cache_hit_count !== a.cache_hit_count) {
+            return b.cache_hit_count - a.cache_hit_count
+          }
+          return b.created_at.localeCompare(a.created_at)
+        })
+    }
     if (tab === "with-stack") list = list.filter((i) => i.generated_stack_id)
     if (tab === "captures") list = list.filter((i) => !i.generated_stack_id)
     return list
-  }, [items, tab, source])
+  }, [items, tab, source, hue, bucketsById])
 
   function setParam(key: string, value: string | null) {
     const next = new URLSearchParams(params.toString())
@@ -139,11 +193,26 @@ export function InspirationsFeed({
 
   const counts = {
     newest: items.length,
+    popular: items.filter((i) => i.cache_hit_count > 0).length,
     withStack: items.filter((i) => i.generated_stack_id).length,
     captures: items.filter((i) => !i.generated_stack_id).length,
   }
 
-  const hasFilters = Boolean(source)
+  // Per-bucket counts, computed off the same map so chip labels stay in
+  // sync with the actual filterable population.
+  const hueCounts = useMemo(() => {
+    const c: Record<HueBucket, number> = {
+      warm: 0,
+      sun: 0,
+      cool: 0,
+      purple: 0,
+      mono: 0,
+    }
+    for (const b of bucketsById.values()) c[b] += 1
+    return c
+  }, [bucketsById])
+
+  const hasFilters = Boolean(source) || Boolean(hue)
 
   return (
     <div>
@@ -154,6 +223,13 @@ export function InspirationsFeed({
           icon={<Clock className="h-3.5 w-3.5" />}
           label="Newest"
           count={counts.newest}
+        />
+        <TabButton
+          active={tab === "popular"}
+          onClick={() => setParam("tab", "popular")}
+          icon={<Flame className="h-3.5 w-3.5" />}
+          label="Popular"
+          count={counts.popular}
         />
         <TabButton
           active={tab === "with-stack"}
@@ -196,6 +272,28 @@ export function InspirationsFeed({
             Clear all
           </Button>
         )}
+      </div>
+
+      {/*
+        Hue chip row. Sits below source filters because it slices the same
+        result set on a different axis — UX-wise the user usually narrows by
+        source first, then explores by colour family.
+      */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Palette className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          Hue
+        </span>
+        {HUE_OPTIONS.map((opt) => (
+          <HueChip
+            key={opt.id}
+            bucket={opt.id}
+            label={opt.label}
+            count={hueCounts[opt.id]}
+            active={hue === opt.id}
+            onClick={() => setParam("hue", hue === opt.id ? null : opt.id)}
+          />
+        ))}
       </div>
 
       <div className="mt-6 flex items-center justify-between font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -253,10 +351,11 @@ function InspirationCard({
   inspiration: PublicInspiration
   pulse: boolean
 }) {
-  const { source_type, source_ref, screenshot_url, signature, stack } = inspiration
+  const { source_type, source_ref, screenshot_url, signature, stack, cache_hit_count } = inspiration
   const SourceIcon = SOURCE_ICONS[source_type]
   const swatchHexes = (signature?.palette ?? []).map((s) => s.hex)
   const isLinked = Boolean(stack?.id)
+  const isHot = cache_hit_count > 0
 
   const href = isLinked
     ? `/s/${stack!.id}`
@@ -342,6 +441,16 @@ function InspirationCard({
           <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-primary/90 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary-foreground">
             <Sparkles className="h-3 w-3" aria-hidden />
             Just landed
+          </span>
+        )}
+        {isHot && (
+          <span
+            className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-foreground/90 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-background backdrop-blur"
+            title={`Re-used ${cache_hit_count} time${cache_hit_count === 1 ? "" : "s"} as a public cache hit`}
+          >
+            <Flame className="h-3 w-3" aria-hidden />
+            <span className="tabular-nums">{cache_hit_count}</span>
+            {cache_hit_count === 1 ? "reuse" : "reuses"}
           </span>
         )}
       </div>
@@ -492,4 +601,118 @@ function Chip({
       {children}
     </button>
   )
+}
+
+// ---------------------------------------------------------------------------
+// HueChip — Phase 4 dominant-hue cluster filter.
+//
+// Visually the chip carries a small swatch in the bucket's representative
+// colour so the filter row reads as a colour palette at a glance. Counts
+// are rendered as tabular-nums so the numeric column lines up cleanly when
+// the bucket totals shift.
+// ---------------------------------------------------------------------------
+function HueChip({
+  bucket,
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  bucket: HueBucket
+  label: string
+  count: number
+  active: boolean
+  onClick: () => void
+}) {
+  const swatch = HUE_SWATCH[bucket]
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-cursor="hover"
+      disabled={count === 0}
+      aria-pressed={active}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider transition ${
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+      } ${count === 0 ? "opacity-40 cursor-not-allowed hover:border-border" : ""}`}
+    >
+      <span
+        className="h-2.5 w-2.5 rounded-full border border-border/40"
+        style={{ background: swatch }}
+        aria-hidden
+      />
+      {label}
+      <span
+        className={`tabular-nums ${
+          active ? "text-primary-foreground/80" : "text-muted-foreground/70"
+        }`}
+      >
+        {count}
+      </span>
+    </button>
+  )
+}
+
+// Visual reference swatches per bucket — picked to match the bucket's
+// canonical hue range. Used only on the filter chip; not stored anywhere.
+const HUE_SWATCH: Record<HueBucket, string> = {
+  warm: "#FF6A4D",
+  sun: "#FFC857",
+  cool: "#3B82F6",
+  purple: "#A855F7",
+  mono: "#9CA3AF",
+}
+
+// ---------------------------------------------------------------------------
+// Hue helpers — pure functions, isolated at the bottom so the React tree
+// stays at the top of the file. Kept module-private; if another component
+// needs them later, hoist into `lib/hue.ts`.
+// ---------------------------------------------------------------------------
+
+/**
+ * Bucket a Signature's dominant palette swatch into one of five UI clusters.
+ * Returns `mono` for missing/empty palettes and for very low-saturation
+ * colours regardless of hue.
+ */
+function bucketHueFromSignature(signature: Signature | null): HueBucket {
+  const hex = signature?.palette?.[0]?.hex
+  if (!hex) return "mono"
+  const hsl = hexToHSL(hex)
+  if (!hsl) return "mono"
+  // Sub-18% saturation reads as a neutral to the eye even if the underlying
+  // hue would otherwise be "blue" or "green". Land everything there in mono
+  // so the colour buckets stay perceptually consistent.
+  if (hsl.s < 0.18) return "mono"
+  const h = hsl.h
+  // Wrap-around warm range: 340–360 + 0–50.
+  if (h < 50 || h >= 340) return "warm"
+  if (h < 90) return "sun"
+  if (h < 260) return "cool"
+  return "purple"
+}
+
+/** Parse a 6-digit hex (with or without leading #) into HSL components. */
+function hexToHSL(hex: string): { h: number; s: number; l: number } | null {
+  const trimmed = hex.replace(/^#/, "")
+  if (trimmed.length !== 6) return null
+  const r = parseInt(trimmed.slice(0, 2), 16) / 255
+  const g = parseInt(trimmed.slice(2, 4), 16) / 255
+  const b = parseInt(trimmed.slice(4, 6), 16) / 255
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  let h = 0
+  let s = 0
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0)
+    else if (max === g) h = (b - r) / d + 2
+    else h = (r - g) / d + 4
+    h *= 60
+  }
+  return { h, s, l }
 }

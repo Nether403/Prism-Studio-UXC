@@ -66,11 +66,16 @@ export default async function DashboardPage() {
     supabase
       .from("inspirations")
       .select(
-        "id,source_type,source_ref,screenshot_url,signature,generated_stack_id,is_public,created_at",
+        // `parent_inspiration_id` powers the v9 lineage grouping in
+        // <ProvenanceStrip/>. We bump the limit from 8 → 24 so a row with
+        // several "More like this" variants doesn't push its parent off the
+        // strip — without that, the grouping logic can't anchor variants to
+        // their root and they'd render as orphan thumbs.
+        "id,source_type,source_ref,screenshot_url,signature,generated_stack_id,is_public,parent_inspiration_id,created_at",
       )
       .eq("owner_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(8),
+      .limit(24),
   ])
 
   const rows: StackRow[] = (stacks ?? []) as StackRow[]

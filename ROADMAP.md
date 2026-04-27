@@ -4,7 +4,7 @@ A living document of what's shipped and what's planned next for
 UXC (formerly Prism Studio). Reorder, edit, or strike through items freely as
 priorities shift.
 
-> Last updated: April 2026 (Phase 5 v2 — UXC rebrand, sunset gradient identity)
+> Last updated: April 2026 (Phase 3/4/5 close-the-loop — lineage on dashboard, popular tab + hue filter, "Most rebuilt" leaderboard)
 
 ---
 
@@ -51,8 +51,11 @@ inspiration loop feels complete."
 - [x] Surface a "variant of …" breadcrumb on `/s/[id]` when the showing
       stack's inspiration has a `parent_inspiration_id`, with a link to
       the source.
-- [ ] Render lineage trees on `/dashboard` — group variants under their
-      parent in the captures strip.
+- [x] Render lineage trees on `/dashboard` — group variants under their
+      parent in the captures strip (`<ProvenanceStrip>` re-orders rows
+      newest-root-first then walks each root's children oldest→newest;
+      child thumbs get a primary-tinted left rail and a "Variant N/M"
+      badge anchored to their parent).
 
 ### Phase 4 — Public inspiration gallery
 
@@ -63,8 +66,13 @@ inspiration loop feels complete."
 - [x] Realtime-subscribed: new public inspirations animate in
       (`alter publication supabase_realtime add table public.inspirations`,
       migration `006_inspirations_realtime.sql`).
-- [ ] Sort by popularity (likes-on-linked-stack + cache-hit count).
-- [ ] Dominant-hue filter chip (cluster on `signature.palette[*].hex`).
+- [x] Sort by popularity (cache-hit count) — new "Popular" tab on
+      `/inspirations` filters to `cache_hit_count > 0` and orders desc,
+      with a per-card "· N reuses" badge.
+- [x] Dominant-hue filter chip — five-bucket clustering (Warm / Sun /
+      Cool / Purple / Mono) computed client-side from
+      `signature.palette[0]` via HSL; chips show per-bucket counts and
+      disable when empty. URL param `?hue=…` makes filters shareable.
 - [ ] "Featured" boolean column + admin moderation queue.
 
 ### Phase 5 — Cross-user cache hits
@@ -80,9 +88,10 @@ inspiration loop feels complete."
       `007_cache_hits.sql`) bumped via `bump_cache_hit(uuid)`
       SECURITY DEFINER RPC, with a `where is_public = true and
       cache_hit_count > 0` partial index for leaderboard queries.
-- [ ] "Most rebuilt URLs" leaderboard surface (consumes the index
-      above; can ship as a slice on `/inspirations` or a tab on the
-      gallery).
+- [x] "Most rebuilt URLs" leaderboard surface — `<MostRebuiltStrip>`
+      hero on `/inspirations` renders the top 6 public rows by
+      `cache_hit_count` (parallel-fetched alongside the feed; query
+      hits the `inspirations_cache_hits_idx` partial index).
 
 ### Quality of life
 
@@ -166,6 +175,17 @@ Things we'd love to try but haven't committed to.
 
 ## Done (recent)
 
+- 2026-04 — Phase 3/4/5 close-the-loop. The dashboard captures strip
+  now groups "More like this" variants under their parent thumb
+  (newest root first, children oldest→newest, primary-tinted left
+  rail + "Variant N/M" badge). `/inspirations` gains a "Popular" tab
+  that filters and sorts by `cache_hit_count`, a five-bucket
+  dominant-hue chip set (Warm / Sun / Cool / Purple / Mono) computed
+  client-side from `signature.palette[0]` HSL, and a per-card
+  "· N reuses" pill on every row that's been hit. A new
+  `<MostRebuiltStrip>` hero sits above the feed and surfaces the top
+  six rows by `cache_hit_count` via the `inspirations_cache_hits_idx`
+  partial index from migration `007`.
 - 2026-04 — Phase 5 v1 — cross-user cache hits. `/api/inspire` and
   `/api/rebuild` now consult a public `inspirations.source_hash`
   lookup after the per-owner cache miss; on hit they clone the
