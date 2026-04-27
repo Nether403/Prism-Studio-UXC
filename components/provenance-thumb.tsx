@@ -15,7 +15,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowUpRight, GitBranch, Globe, ImageIcon, Lock, ScrollText } from "lucide-react"
+import { ArrowUpRight, Check, GitBranch, Globe, ImageIcon, Lock, ScrollText } from "lucide-react"
 import type { Signature, SourceType } from "@/lib/signature"
 import { InspirationPrivacyToggle } from "@/components/inspiration-privacy-toggle"
 
@@ -69,26 +69,35 @@ export type ProvenanceStripProps = {
   editable?: boolean
 }
 
-export function ProvenanceStrip({
-  inspirations,
-  stacksById,
-  editable = false,
-}: ProvenanceStripProps) {
-  if (inspirations.length === 0) return null
+/**
+ * One ordered item in the strip — exposed so the dashboard's selection-mode
+ * wrapper can render the same lineage grouping without duplicating the
+ * traversal logic.
+ */
+export type StripItem = {
+  insp: ProvenanceInspiration
+  variantOf: VariantOfHint | null
+}
 
-  // ---------------------------------------------------------------------
-  // Lineage grouping (v9 / Phase 3).
-  //
-  // We re-order the strip so each variant sits immediately after its parent.
-  // Roots are emitted in chronological order (newest first); within a root,
-  // children are emitted oldest → newest so the variant numbering reads
-  // naturally ("Variant 1" is the first re-roll, "Variant N" is the latest).
-  //
-  // A row whose `parent_inspiration_id` points outside the fetched set is
-  // treated as a root in this view — we can't render a "Variant of …" badge
-  // we can't anchor, and the user usually still wants to see it as a
-  // first-class capture in their workspace.
-  // ---------------------------------------------------------------------
+/**
+ * Group a flat list of inspirations into "root + variants" order.
+ *
+ * Re-orders the input so each variant sits immediately after its parent.
+ * Roots are emitted in input order (callers pass newest-first); within a
+ * root, children are emitted oldest → newest so variant numbering reads
+ * naturally ("Variant 1" is the first re-roll).
+ *
+ * A row whose `parent_inspiration_id` points outside the input set is
+ * treated as a root in this view — we can't render a "Variant of …" badge
+ * we can't anchor, so showing it as a first-class capture is the right
+ * default.
+ *
+ * Returns the ordered items plus a count of how many of them are variants
+ * (handy for the section header pill).
+ */
+export function groupInspirationsByLineage(
+  inspirations: ProvenanceInspiration[],
+): { ordered: StripItem[]; variantTotal: number } {
   const idsInSet = new Set(inspirations.map((i) => i.id))
   const childrenByParent = new Map<string, ProvenanceInspiration[]>()
   const roots: ProvenanceInspiration[] = []
@@ -104,13 +113,10 @@ export function ProvenanceStrip({
     }
   }
 
-  // Roots already arrive newest-first from the page-level query; we keep
-  // that order. Children: oldest → newest so badge numbering is intuitive.
   for (const arr of childrenByParent.values()) {
     arr.sort((a, b) => a.created_at.localeCompare(b.created_at))
   }
 
-  type StripItem = { insp: ProvenanceInspiration; variantOf: VariantOfHint | null }
   const ordered: StripItem[] = []
   for (const root of roots) {
     ordered.push({ insp: root, variantOf: null })
@@ -129,7 +135,17 @@ export function ProvenanceStrip({
     })
   }
 
-  const variantTotal = inspirations.length - roots.length
+  return { ordered, variantTotal: inspirations.length - roots.length }
+}
+
+export function ProvenanceStrip({
+  inspirations,
+  stacksById,
+  editable = false,
+}: ProvenanceStripProps) {
+  if (inspirations.length === 0) return null
+
+  const { ordered, variantTotal } = groupInspirationsByLineage(inspirations)
 
   return (
     <section aria-labelledby="provenance-strip-heading" className="space-y-4">
@@ -193,6 +209,17 @@ function parentLabel(parent: ProvenanceInspiration): string {
   return "notes"
 }
 
+/**
+ * Selection-mode handle. When provided, the thumb renders as a button that
+ * toggles its own selected state instead of navigating, and replaces the
+ * privacy toggle / lock badge with a checkbox indicator. Used by the
+ * dashboard's bulk-privacy "Manage" mode.
+ */
+export type ProvenanceThumbSelection = {
+  selected: boolean
+  onToggle: () => void
+}
+
 type ProvenanceThumbProps = {
   inspiration: ProvenanceInspiration
   linkedStack: { title: string | null; headline: string } | null
@@ -204,6 +231,12 @@ type ProvenanceThumbProps = {
    * border to visually nest it next to its parent in the strip.
    */
   variantOf?: VariantOfHint | null
+  /**
+   * When set, the thumb is a selection target rather than a navigation
+   * target. Mutually exclusive with `editable` (we suppress the privacy
+   * toggle in selection mode so the card has a single interaction model).
+   */
+  selection?: ProvenanceThumbSelection | null
 }
 
 export function ProvenanceThumb({
@@ -211,22 +244,26 @@ export function ProvenanceThumb({
   linkedStack,
   editable = false,
   variantOf = null,
+  selection = null,
 }: ProvenanceThumbProps) {
   const { id, source_type, source_ref, screenshot_url, signature, generated_stack_id, is_public } =
     inspiration
   const SourceIcon = SOURCE_ICONS[source_type]
   const isVariant = Boolean(variantOf)
+  const isSelectMode = Boolean(selection)
+  const isSelected = selection?.selected === true
 
   // The destination depends on whether the inspiration produced a stack.
   // Linked → deep-link to the share page. Pending → resume in the originating
   // studio so the owner can re-roll it without re-uploading. URL/OG inputs
   // pass the original source via ?url=… so RebuildStudio can prefill.
+  // In select mode we never navigate — the card click toggles selection.
   const isLinked = Boolean(generated_stack_id && linkedStack)
   const href = isLinked
     ? `/s/${generated_stack_id}`
     : source_type === "url" || source_type === "og"
       ? `/rebuild?url=${encodeURIComponent(source_ref)}`
-      : "/from-image"
+      : `/from-image?ref=${encodeURIComponent(id)}`
 
   const caption = isLinked
     ? linkedStack!.title || linkedStack!.headline
@@ -257,24 +294,50 @@ export function ProvenanceThumb({
     ? "w-[200px] border-l-2 border-l-primary/60"
     : "w-[220px]"
 
+  // Selection ring overrides the default border so the card reads as
+  // "active" without competing with the variant rail. Selection mode also
+  // dims unselected cards slightly so the chosen ones pop visually.
+  const selectionClasses = isSelectMode
+    ? isSelected
+      ? "ring-2 ring-primary border-primary"
+      : "opacity-90 hover:opacity-100"
+    : ""
+
   return (
     <div
       className={`group relative block overflow-hidden rounded-lg border bg-card/40 transition hover:border-foreground/30 hover:bg-card ${variantClasses} ${
         isLinked ? "border-border" : "border-dashed border-border"
-      }`}
+      } ${selectionClasses}`}
     >
-      <Link
-        href={href}
-        data-cursor="hover"
-        aria-label={
-          isVariant
-            ? `Variant ${variantOf!.index} of ${variantOf!.total} from ${variantOf!.label}: ${caption}. ${hint}.`
-            : `${SOURCE_LABELS[source_type]}: ${caption}. ${hint}.`
-        }
-        className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-      >
-        <span className="sr-only">{caption}</span>
-      </Link>
+      {isSelectMode ? (
+        <button
+          type="button"
+          onClick={selection!.onToggle}
+          aria-pressed={isSelected}
+          aria-label={
+            isSelected
+              ? `Deselect ${SOURCE_LABELS[source_type]}: ${caption}.`
+              : `Select ${SOURCE_LABELS[source_type]}: ${caption}.`
+          }
+          data-cursor="hover"
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <span className="sr-only">{caption}</span>
+        </button>
+      ) : (
+        <Link
+          href={href}
+          data-cursor="hover"
+          aria-label={
+            isVariant
+              ? `Variant ${variantOf!.index} of ${variantOf!.total} from ${variantOf!.label}: ${caption}. ${hint}.`
+              : `${SOURCE_LABELS[source_type]}: ${caption}. ${hint}.`
+          }
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <span className="sr-only">{caption}</span>
+        </Link>
+      )}
 
       <div
         className="relative aspect-[5/4] w-full bg-secondary"
@@ -300,12 +363,26 @@ export function ProvenanceThumb({
         </span>
 
         {/*
-          Top-right slot: editable mode renders the live privacy toggle;
-          read-only mode falls back to a static lock badge when the row is
-          private (and renders nothing when it's public — the absence of a
-          chip is the "public" state in that mode).
+          Top-right slot priority:
+            1. Selection mode → checkbox indicator (single interaction model
+               for the whole card; the privacy toggle is hidden so users
+               can't flip one row while picking a batch).
+            2. Editable mode → live privacy toggle.
+            3. Read-only mode → static lock badge if private; nothing if
+               public (absence is the "public" state).
         */}
-        {editable ? (
+        {isSelectMode ? (
+          <span
+            aria-hidden
+            className={`absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full border transition ${
+              isSelected
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background/85 backdrop-blur"
+            }`}
+          >
+            {isSelected && <Check className="h-3 w-3" strokeWidth={3} />}
+          </span>
+        ) : editable ? (
           <InspirationPrivacyToggle inspirationId={id} initialPublic={is_public} />
         ) : (
           !is_public && (

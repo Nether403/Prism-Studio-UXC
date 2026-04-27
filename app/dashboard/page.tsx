@@ -6,7 +6,8 @@ import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
 import { DashboardList } from "@/components/dashboard-list"
 import { ActivityFeed, type ActivityEvent } from "@/components/activity-feed"
-import { ProvenanceStrip, type ProvenanceInspiration } from "@/components/provenance-thumb"
+import type { ProvenanceInspiration } from "@/components/provenance-thumb"
+import { DashboardCapturesStrip } from "@/components/dashboard-captures-strip"
 import type { Theme } from "@/lib/themes"
 
 export const metadata = {
@@ -146,7 +147,10 @@ export default async function DashboardPage() {
       {inspirationRows.length > 0 && (
         <section className="relative pb-12">
           <div className="mx-auto max-w-6xl px-6">
-            <ProvenanceStrip inspirations={inspirationRows} stacksById={stacksById} editable />
+            <DashboardCapturesStrip
+              inspirations={inspirationRows}
+              stacksById={stacksById}
+            />
           </div>
         </section>
       )}
