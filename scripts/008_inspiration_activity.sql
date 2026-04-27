@@ -1,11 +1,11 @@
 -- Phase QoL: inspiration activity events.
 --
 -- Two new event types are surfaced on profiles + the dashboard:
---   • inspiration_publish — when an owner flips is_public on a capture (or
---     creates one with is_public=true). This complements the existing
---     `publish` event for stacks so a profile can show "captured + shared
---     a Mobbin reference" alongside "published a stack".
---   • inspiration_cache_hit — when another user re-uses someone's public
+--   - inspiration_publish: when an owner flips is_public on a capture (or
+--     creates one with is_public=true). Complements the existing `publish`
+--     event for stacks so a profile can show "captured + shared a Mobbin
+--     reference" alongside "published a stack".
+--   - inspiration_cache_hit: when another user re-uses someone's public
 --     capture via the cross-user cache path. The author of the public row
 --     gets the event on their target_user_id; the actor is the re-user.
 --
@@ -39,9 +39,9 @@ create index if not exists activity_inspiration_idx
   on public.activity_events (inspiration_id, created_at desc);
 
 -- 3) Trigger on `inspirations` that fires when:
---      • a row is inserted with is_public = true (rare — most rows start
+--      - a row is inserted with is_public = true (rare; most rows start
 --        private and get flipped later, but still possible via the API),
---      • or an existing row's is_public flips false → true.
+--      - or an existing row's is_public flips false -> true.
 --
 --    The event is attributed to the owner (actor + target are the same
 --    user) so it shows up on their profile feed and not on anyone else's

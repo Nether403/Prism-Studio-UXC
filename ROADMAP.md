@@ -4,7 +4,7 @@ A living document of what's shipped and what's planned next for
 UXC (formerly Prism Studio). Reorder, edit, or strike through items freely as
 priorities shift.
 
-> Last updated: April 2026 (Phase 3/4/5 close-the-loop — lineage on dashboard, popular tab + hue filter, "Most rebuilt" leaderboard)
+> Last updated: April 2026 (QoL bundle — profile provenance strip, dashboard bulk-privacy, `/from-image?ref=` resume, inspiration activity events)
 
 ---
 
@@ -95,17 +95,30 @@ inspiration loop feels complete."
 
 ### Quality of life
 
-- [ ] **`/from-image` resume** — accept a `?ref=<inspirationId>` param
-      that re-loads the original image from blob storage instead of
-      forcing the user to re-upload.
-- [ ] **Provenance on profiles** — `/u/[username]` gets a public
-      captures strip showing only that user's `is_public = true`
-      inspirations.
-- [ ] **Bulk privacy** — checkbox-select on the dashboard strip + a
-      "Make all public / private" action.
-- [ ] **Activity events for inspirations** — log `inspiration.publish`
-      and `inspiration.cache_hit` events alongside the existing stack
-      events so the activity feed reflects the full creative loop.
+- [x] **`/from-image` resume** — `?ref=<inspirationId>` server-fetches
+      the owner's row, validates ownership, and hands a `ResumedInspiration`
+      down to `<FromImageStudio>` so it boots straight into the variant
+      picker with the existing palette/brief loaded; pending captures
+      from the dashboard now link here instead of forcing a re-upload.
+- [x] **Provenance on profiles** — `/u/[username]` renders a
+      `<ProvenanceStrip>` of the user's public captures (limit 24,
+      `parent_inspiration_id` included so lineage groups still work);
+      header gets a "· N public captures" sub-stat next to the stack
+      count.
+- [x] **Bulk privacy** — `<DashboardCapturesStrip>` adds a "Manage"
+      mode that turns thumbs into selection targets; a sticky toolbar
+      surfaces "Make public / Make private" actions wired to the new
+      `setInspirationsPublicBulk` server action (RLS + explicit
+      `eq("owner_id", uid)` double-guard, 100-row defensive cap).
+- [x] **Activity events for inspirations** — migration
+      `008_inspiration_activity.sql` widens the `activity_events.type`
+      CHECK to add `inspiration_publish` + `inspiration_cache_hit`,
+      installs an `AFTER INSERT/UPDATE` trigger on `inspirations` that
+      logs publishes (insert with `is_public=true` or false-to-true
+      flip), and replaces `bump_cache_hit()` so it also writes a
+      cache-hit event with the original author as `target_user_id`.
+      `<ActivityFeed>` renders both with hostname-only labels for URL
+      sources (no leaked blob paths for image uploads).
 
 ---
 
@@ -175,6 +188,25 @@ Things we'd love to try but haven't committed to.
 
 ## Done (recent)
 
+- 2026-04 — QoL bundle. `/u/[username]` profiles now mount a
+  `<ProvenanceStrip>` of the user's public captures with lineage
+  grouping intact, plus a "· N public captures" stat in the profile
+  header. The dashboard strip is replaced by `<DashboardCapturesStrip>`
+  with a "Manage" toggle that turns thumbs into selectable targets and
+  surfaces a sticky toolbar driving `setInspirationsPublicBulk` (single
+  round-trip, RLS-double-guarded, 100-row cap). `/from-image` accepts a
+  `?ref=<inspirationId>` query param: the page server-fetches the
+  owner's row and hands a `ResumedInspiration` down to the studio so
+  the variant picker boots without a re-upload — the dashboard's
+  "Pending" thumbs now deep-link here, and pending captures preserve
+  `?ref=` across login. Activity migration `008_inspiration_activity.sql`
+  widens the `type` CHECK to add `inspiration_publish` and
+  `inspiration_cache_hit`, installs an `AFTER INSERT/UPDATE` trigger on
+  `inspirations` to log publishes, and replaces `bump_cache_hit()` so
+  the existing counter bump also writes a cache-hit event attributed
+  to the re-using viewer with the original author as
+  `target_user_id`. `<ActivityFeed>` renders both new event types with
+  hostname-only labels for URL sources (no leaked blob paths).
 - 2026-04 — Phase 3/4/5 close-the-loop. The dashboard captures strip
   now groups "More like this" variants under their parent thumb
   (newest root first, children oldest→newest, primary-tinted left
