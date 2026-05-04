@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: `What shipped, version by version. ${SITE.shortDescription}`,
   alternates: { canonical: "/changelog" },
   openGraph: {
-    title: "Prism Changelog",
+    title: "UXC Changelog",
     description: "What shipped, version by version.",
     type: "website",
     url: `${SITE_URL}/changelog`,
@@ -41,7 +41,7 @@ export default function ChangelogPage() {
           {
             "@context": "https://schema.org",
             "@type": "Blog",
-            name: "Prism Changelog",
+            name: "UXC Changelog",
             url: `${SITE_URL}/changelog`,
             blogPost: CHANGELOG.map((c) => ({
               "@type": "BlogPosting",
@@ -67,7 +67,7 @@ export default function ChangelogPage() {
             <em className="italic text-muted-foreground">version by version.</em>
           </h1>
           <p className="mt-6 max-w-xl text-muted-foreground text-lg text-pretty">
-            Every meaningful change to Prism, in reverse-chronological order. Subscribe via{" "}
+            Every meaningful change to UXC, in reverse-chronological order. Subscribe via{" "}
             <Link href="/feed.xml" className="underline underline-offset-4 hover:text-foreground">
               RSS
             </Link>

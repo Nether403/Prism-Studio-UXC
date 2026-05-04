@@ -27,7 +27,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params
   return {
-    title: `Embed · ${id} · Prism`,
+    title: `Embed · ${id} · UXC`,
     robots: { index: false, follow: false },
     other: {
       // Allow same-origin and arbitrary embed contexts.
@@ -78,7 +78,7 @@ export default async function EmbedPage({
               className="inline-block h-2 w-2 rounded-sm"
               style={{ background: theme.primary }}
             />
-            <span>{theme.name || "Prism"}</span>
+            <span>{theme.name || "UXC"}</span>
             <span className="opacity-50">·</span>
             <span>{stack.vibe}</span>
           </div>
@@ -165,7 +165,7 @@ export default async function EmbedPage({
               className="inline-block h-1.5 w-1.5 rounded-sm"
               style={{ background: theme.accent }}
             />
-            Made with Prism
+            Made with UXC
           </Link>
         </div>
       </article>

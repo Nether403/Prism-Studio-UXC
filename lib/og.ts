@@ -45,7 +45,7 @@ const IMAGE_FETCH_TIMEOUT_MS = 12_000
 const HTML_MAX_BYTES = 256 * 1024 // 256KB cap on HTML body — OG meta is in <head>
 const IMAGE_MAX_BYTES = 12 * 1024 * 1024 // 12MB cap on the OG image itself
 
-const USER_AGENT = "Prism-Studio-Bot/1.0 (+https://prism.studio; signature-extraction)"
+const USER_AGENT = "UXC-Bot/1.0 (+https://uxc.me; signature-extraction)"
 
 export type OgFetchResult =
   | {

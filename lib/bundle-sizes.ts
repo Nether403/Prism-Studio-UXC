@@ -1,5 +1,5 @@
 /**
- * Honest gzipped bundle sizes for the libraries Prism recommends.
+ * Honest gzipped bundle sizes for the libraries UXC recommends.
  *
  * Numbers reflect a typical first-load cost in production: the published gzipped
  * size of the runtime package (or the client portion of a framework). They are

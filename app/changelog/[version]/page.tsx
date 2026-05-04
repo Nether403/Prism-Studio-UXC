@@ -81,8 +81,8 @@ export default async function ChangelogEntryPage({
             datePublished: entry.date,
             dateModified: entry.date,
             url: `${SITE_URL}/changelog/${entry.version}`,
-            author: { "@type": "Organization", name: "Prism" },
-            publisher: { "@type": "Organization", name: "Prism" },
+            author: { "@type": "Organization", name: "UXC" },
+            publisher: { "@type": "Organization", name: "UXC" },
           },
         ]}
       />

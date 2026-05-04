@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "About — Martin vanDeursen",
     description:
-      "The person behind Prism Studio, The Witness Protocol, and Realm101. Amsterdam, Netherlands.",
+      "The person behind UXC, The Witness Protocol, and Realm101. Amsterdam, Netherlands.",
     type: "profile",
     url: "/about",
   },
@@ -140,7 +140,7 @@ export default function AboutPage() {
               <p className="mt-6 max-w-2xl text-pretty text-lg text-muted-foreground leading-relaxed">
                 Independent operator behind <span className="text-foreground">Realm101</span> and{" "}
                 <span className="text-foreground">The Witness Protocol</span> — a small studio
-                making opinionated tools, narrative work, and the occasional generator. Prism is
+                making opinionated tools, narrative work, and the occasional generator. UXC is
                 one of those.
               </p>
             </div>
@@ -280,7 +280,7 @@ export default function AboutPage() {
 
           <div className="mt-16 flex flex-col gap-4 border-t border-border pt-8 md:flex-row md:items-center md:justify-between">
             <p className="max-w-xl text-pretty text-sm text-muted-foreground leading-relaxed">
-              Have a brief? Want to talk about a build, a bug in Prism, or something stranger? Drop
+              Have a brief? Want to talk about a build, a bug in UXC, or something stranger? Drop
               a note — I read everything.
             </p>
             <Link

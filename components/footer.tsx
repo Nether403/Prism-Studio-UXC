@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react"
+import { UxcWordmark } from "@/components/uxc-wordmark"
 
 export function Footer() {
   return (
@@ -6,12 +6,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-6 py-20 md:py-28">
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-6">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <Sparkles className="h-4 w-4" strokeWidth={2.5} />
-              </span>
-              <span className="font-mono text-sm tracking-tight">PRISM/STUDIO</span>
-            </div>
+            <UxcWordmark variant="lockup" />
             <p className="mt-6 max-w-md font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.05] text-balance">
               Brief in. <em className="italic text-primary">Stack out.</em>
               <br />
@@ -106,7 +101,7 @@ export function Footer() {
 
         <div className="mt-16 flex flex-col gap-4 border-t border-border pt-6 md:flex-row md:items-center md:justify-between">
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            © {new Date().getFullYear()} Prism Studio · A v0 demo
+            © {new Date().getFullYear()} UXC · A v0 demo
           </p>
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
             Crafted with WebGL, GSAP, Lenis, Shadcn, Tailwind, Next.js
@@ -114,14 +109,17 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Giant wordmark */}
+      {/* Giant wordmark — uses Bricolage Grotesque so it matches the
+          nav lockup, with the canonical sunset gradient at very low
+          opacity so it reads as ambient brand texture rather than a
+          competing headline. */}
       <div className="overflow-hidden border-t border-border">
         <div className="mx-auto max-w-[100rem] px-6 py-12">
           <div
             aria-hidden
-            className="font-display tracking-[-0.06em] leading-[0.85] text-[clamp(5rem,18vw,18rem)] text-foreground/[0.05] select-none"
+            className="brand-gradient font-[family-name:var(--font-bricolage)] font-extrabold lowercase tracking-[-0.07em] leading-[0.85] text-[clamp(5rem,22vw,22rem)] opacity-30 select-none"
           >
-            PRISM
+            uxc
           </div>
         </div>
       </div>

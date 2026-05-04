@@ -5,6 +5,7 @@ import { Nav } from "@/components/nav"
 import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
 import { ActivityFeed, type ActivityEvent } from "@/components/activity-feed"
+import { ProvenanceStrip, type ProvenanceInspiration } from "@/components/provenance-thumb"
 import { JsonLd } from "@/components/json-ld"
 import type { Theme } from "@/lib/themes"
 import { Heart, GitFork } from "lucide-react"
@@ -20,11 +21,11 @@ export async function generateMetadata({
   const { username } = await params
   const canonical = `/u/${username}`
   return {
-    title: `@${username} · Prism`,
+    title: `@${username} · UXC`,
     description: `Stacks published by @${username}.`,
     alternates: { canonical },
     openGraph: {
-      title: `@${username} on Prism`,
+      title: `@${username} on UXC`,
       description: `Design stacks published by @${username}.`,
       type: "profile",
       url: canonical,
@@ -58,7 +59,7 @@ export default async function ProfilePage({
     .maybeSingle()
   if (!profile) notFound()
 
-  const [{ data: stacks }, { data: events }] = await Promise.all([
+  const [{ data: stacks }, { data: events }, { data: inspirations }] = await Promise.all([
     supabase
       .from("stacks")
       .select("id,title,headline,prompt,vibe,likes,fork_count,theme,stack_ids")
@@ -71,10 +72,31 @@ export default async function ProfilePage({
       .or(`actor_id.eq.${profile.id},target_user_id.eq.${profile.id}`)
       .order("created_at", { ascending: false })
       .limit(20),
+    // Public captures owned by this profile. We pull `parent_inspiration_id`
+    // so <ProvenanceStrip/> can group "More like this" variants under their
+    // parent on profiles too, and bump the limit to 24 — same headroom we
+    // give the dashboard so a chain of variants doesn't push its parent
+    // off the strip and lose its anchor.
+    supabase
+      .from("inspirations")
+      .select(
+        "id,source_type,source_ref,screenshot_url,signature,generated_stack_id,is_public,parent_inspiration_id,created_at",
+      )
+      .eq("owner_id", profile.id)
+      .eq("is_public", true)
+      .order("created_at", { ascending: false })
+      .limit(24),
   ])
 
   const rows: Row[] = (stacks ?? []) as Row[]
   const activity = ((events ?? []) as unknown as ActivityEvent[]) ?? []
+  const inspirationRows = (inspirations ?? []) as ProvenanceInspiration[]
+
+  // Map every published stack so each linked thumb in the strip can show
+  // the producing stack's title without an N+1. Strip thumbs gracefully
+  // degrade to "Pending" when no entry exists.
+  const stacksById: Record<string, { title: string | null; headline: string }> = {}
+  for (const s of rows) stacksById[s.id] = { title: s.title, headline: s.headline }
 
   return (
     <main className="relative">
@@ -116,11 +138,30 @@ export default async function ProfilePage({
           {profile.bio && (
             <p className="mt-4 max-w-xl text-muted-foreground leading-relaxed">{profile.bio}</p>
           )}
-          <div className="mt-6 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-            {rows.length} published {rows.length === 1 ? "stack" : "stacks"}
+          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs uppercase tracking-wider text-muted-foreground">
+            <span>
+              {rows.length} published {rows.length === 1 ? "stack" : "stacks"}
+            </span>
+            {inspirationRows.length > 0 && (
+              <>
+                <span aria-hidden>·</span>
+                <span>
+                  {inspirationRows.length} public{" "}
+                  {inspirationRows.length === 1 ? "capture" : "captures"}
+                </span>
+              </>
+            )}
           </div>
         </div>
       </section>
+
+      {inspirationRows.length > 0 && (
+        <section className="relative pb-12">
+          <div className="mx-auto max-w-5xl px-6">
+            <ProvenanceStrip inspirations={inspirationRows} stacksById={stacksById} />
+          </div>
+        </section>
+      )}
 
       <section className="relative pb-24">
         <div className="mx-auto max-w-5xl px-6">

@@ -22,23 +22,31 @@ export type Theme = {
   motto: string
 }
 
-/** The original Prism Studio dark editorial theme — used as default */
+/**
+ * UXC default theme — warm-tinted dark canvas with a coral-magenta
+ * primary, deep-purple accent, and Instrument Serif display.
+ *
+ * Palette is the canonical center of the brand sunset gradient
+ * (yellow #FFC857 → orange #FF8A3D → coral #FF3D6A → magenta #B13D8A
+ * → purple #5B2A86). Rendered in OKLCH so the AI theme generator can
+ * keep producing variants in the same color space.
+ */
 export const DEFAULT_THEME: Theme = {
-  name: "Prism Default",
-  background: "oklch(0.13 0.005 240)",
-  foreground: "oklch(0.98 0 0)",
-  card: "oklch(0.16 0.005 240)",
-  primary: "oklch(0.92 0.22 125)",
-  primaryForeground: "oklch(0.13 0.005 240)",
-  accent: "oklch(0.72 0.2 45)",
-  muted: "oklch(0.2 0.005 240)",
-  mutedForeground: "oklch(0.65 0.005 240)",
-  border: "oklch(0.25 0.005 240)",
+  name: "UXC Default",
+  background: "oklch(0.13 0.012 30)",
+  foreground: "oklch(0.97 0.005 70)",
+  card: "oklch(0.16 0.014 30)",
+  primary: "oklch(0.69 0.22 18)",
+  primaryForeground: "oklch(0.13 0.012 30)",
+  accent: "oklch(0.50 0.18 320)",
+  muted: "oklch(0.21 0.012 30)",
+  mutedForeground: "oklch(0.66 0.012 50)",
+  border: "oklch(0.26 0.012 30)",
   displayFont: "Instrument Serif",
   displayItalic: true,
   bodyFont: "Geist",
   radius: "0.625rem",
-  motto: "Compose interfaces that refract ideas into pixels.",
+  motto: "UX, curated.",
 }
 
 /** Curated presets for the command palette */

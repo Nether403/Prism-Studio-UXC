@@ -234,7 +234,7 @@ ${signature.palette.map((s) => `    ${s.role.padEnd(10)} ${s.hex} (${s.name})`).
 When generating this variant, riff on the source signature for THIS mode's character. Performance-first should distill the palette to its quietest two colors. Maximalist may push saturation, add a highlight. Balanced stays close to the source.`
         : ""
 
-      const system = `You are Prism, an opinionated design director. Generate a tightly-scoped variant of a stack proposal.
+      const system = `You are UXC, an opinionated design director. Generate a tightly-scoped variant of a stack proposal.
 
 This is the "${mode.label}" variant: ${mode.blurb}
 

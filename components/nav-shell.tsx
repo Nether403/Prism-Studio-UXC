@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type ReactNode } from "react"
 import Link from "next/link"
-import { Sparkles } from "lucide-react"
 import { CommandTrigger } from "@/components/command-palette"
+import { UxcWordmark } from "@/components/uxc-wordmark"
 
 export function NavShell({ authSlot }: { authSlot: ReactNode }) {
   const [scrolled, setScrolled] = useState(false)
@@ -24,14 +24,8 @@ export function NavShell({ authSlot }: { authSlot: ReactNode }) {
       }`}
     >
       <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 group" data-cursor="hover">
-          <span className="relative inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <span className="absolute inset-0 rounded-md bg-primary blur-md opacity-50 group-hover:opacity-80 transition" />
-            <Sparkles className="relative h-4 w-4" strokeWidth={2.5} />
-          </span>
-          <span className="font-mono text-sm tracking-tight">
-            PRISM<span className="text-muted-foreground">/</span>STUDIO
-          </span>
+        <Link href="/" className="group inline-flex items-center" data-cursor="hover">
+          <UxcWordmark variant="lockup" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">

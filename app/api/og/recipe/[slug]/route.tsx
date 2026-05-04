@@ -80,7 +80,7 @@ export async function GET(
               display: "flex",
             }}
           />
-          Prism
+          UXC
         </div>
 
         <div
@@ -149,7 +149,7 @@ export async function GET(
           <span style={{ opacity: 0.4 }}>·</span>
           <span>{recipe.performance} budget</span>
         </div>
-        <div style={{ display: "flex" }}>prism.app</div>
+        <div style={{ display: "flex" }}>uxc.me</div>
       </div>
     </div>,
     { ...size },

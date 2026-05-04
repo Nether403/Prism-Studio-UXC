@@ -76,7 +76,7 @@ export function ShareActions({
 
   function handleCopyEmbed() {
     const origin = typeof window !== "undefined" ? window.location.origin : ""
-    const snippet = `<iframe src="${origin}/s/${id}/embed" width="100%" height="540" style="border:0;border-radius:12px;overflow:hidden" loading="lazy" title="Prism stack ${id}"></iframe>`
+    const snippet = `<iframe src="${origin}/s/${id}/embed" width="100%" height="540" style="border:0;border-radius:12px;overflow:hidden" loading="lazy" title="UXC stack ${id}"></iframe>`
     navigator.clipboard.writeText(snippet).then(() => {
       setEmbedCopied(true)
       toast.success("Embed code copied", {

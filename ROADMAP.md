@@ -1,10 +1,10 @@
 # Roadmap
 
 A living document of what's shipped and what's planned next for
-Prism Studio. Reorder, edit, or strike through items freely as
+UXC (formerly Prism Studio). Reorder, edit, or strike through items freely as
 priorities shift.
 
-> Last updated: April 2026 (Phase 5 v1 — cross-user cache hits)
+> Last updated: April 2026 (QoL bundle — profile provenance strip, dashboard bulk-privacy, `/from-image?ref=` resume, inspiration activity events)
 
 ---
 
@@ -51,8 +51,11 @@ inspiration loop feels complete."
 - [x] Surface a "variant of …" breadcrumb on `/s/[id]` when the showing
       stack's inspiration has a `parent_inspiration_id`, with a link to
       the source.
-- [ ] Render lineage trees on `/dashboard` — group variants under their
-      parent in the captures strip.
+- [x] Render lineage trees on `/dashboard` — group variants under their
+      parent in the captures strip (`<ProvenanceStrip>` re-orders rows
+      newest-root-first then walks each root's children oldest→newest;
+      child thumbs get a primary-tinted left rail and a "Variant N/M"
+      badge anchored to their parent).
 
 ### Phase 4 — Public inspiration gallery
 
@@ -63,8 +66,13 @@ inspiration loop feels complete."
 - [x] Realtime-subscribed: new public inspirations animate in
       (`alter publication supabase_realtime add table public.inspirations`,
       migration `006_inspirations_realtime.sql`).
-- [ ] Sort by popularity (likes-on-linked-stack + cache-hit count).
-- [ ] Dominant-hue filter chip (cluster on `signature.palette[*].hex`).
+- [x] Sort by popularity (cache-hit count) — new "Popular" tab on
+      `/inspirations` filters to `cache_hit_count > 0` and orders desc,
+      with a per-card "· N reuses" badge.
+- [x] Dominant-hue filter chip — five-bucket clustering (Warm / Sun /
+      Cool / Purple / Mono) computed client-side from
+      `signature.palette[0]` via HSL; chips show per-bucket counts and
+      disable when empty. URL param `?hue=…` makes filters shareable.
 - [ ] "Featured" boolean column + admin moderation queue.
 
 ### Phase 5 — Cross-user cache hits
@@ -80,23 +88,37 @@ inspiration loop feels complete."
       `007_cache_hits.sql`) bumped via `bump_cache_hit(uuid)`
       SECURITY DEFINER RPC, with a `where is_public = true and
       cache_hit_count > 0` partial index for leaderboard queries.
-- [ ] "Most rebuilt URLs" leaderboard surface (consumes the index
-      above; can ship as a slice on `/inspirations` or a tab on the
-      gallery).
+- [x] "Most rebuilt URLs" leaderboard surface — `<MostRebuiltStrip>`
+      hero on `/inspirations` renders the top 6 public rows by
+      `cache_hit_count` (parallel-fetched alongside the feed; query
+      hits the `inspirations_cache_hits_idx` partial index).
 
 ### Quality of life
 
-- [ ] **`/from-image` resume** — accept a `?ref=<inspirationId>` param
-      that re-loads the original image from blob storage instead of
-      forcing the user to re-upload.
-- [ ] **Provenance on profiles** — `/u/[username]` gets a public
-      captures strip showing only that user's `is_public = true`
-      inspirations.
-- [ ] **Bulk privacy** — checkbox-select on the dashboard strip + a
-      "Make all public / private" action.
-- [ ] **Activity events for inspirations** — log `inspiration.publish`
-      and `inspiration.cache_hit` events alongside the existing stack
-      events so the activity feed reflects the full creative loop.
+- [x] **`/from-image` resume** — `?ref=<inspirationId>` server-fetches
+      the owner's row, validates ownership, and hands a `ResumedInspiration`
+      down to `<FromImageStudio>` so it boots straight into the variant
+      picker with the existing palette/brief loaded; pending captures
+      from the dashboard now link here instead of forcing a re-upload.
+- [x] **Provenance on profiles** — `/u/[username]` renders a
+      `<ProvenanceStrip>` of the user's public captures (limit 24,
+      `parent_inspiration_id` included so lineage groups still work);
+      header gets a "· N public captures" sub-stat next to the stack
+      count.
+- [x] **Bulk privacy** — `<DashboardCapturesStrip>` adds a "Manage"
+      mode that turns thumbs into selection targets; a sticky toolbar
+      surfaces "Make public / Make private" actions wired to the new
+      `setInspirationsPublicBulk` server action (RLS + explicit
+      `eq("owner_id", uid)` double-guard, 100-row defensive cap).
+- [x] **Activity events for inspirations** — migration
+      `008_inspiration_activity.sql` widens the `activity_events.type`
+      CHECK to add `inspiration_publish` + `inspiration_cache_hit`,
+      installs an `AFTER INSERT/UPDATE` trigger on `inspirations` that
+      logs publishes (insert with `is_public=true` or false-to-true
+      flip), and replaces `bump_cache_hit()` so it also writes a
+      cache-hit event with the original author as `target_user_id`.
+      `<ActivityFeed>` renders both with hostname-only labels for URL
+      sources (no leaked blob paths for image uploads).
 
 ---
 
@@ -130,10 +152,10 @@ Bigger bets that depend on the above shipping cleanly first.
 
 - [ ] **API access** — public REST endpoint for `/api/generate` and
       `/api/inspire` with per-key rate limiting via Upstash.
-- [ ] **Figma plugin** — paste a Prism stack URL into Figma, get the
+- [ ] **Figma plugin** — paste a UXC stack URL into Figma, get the
       palette + type tokens applied to the file.
 - [ ] **Browser extension** — right-click any site → "Rebuild with
-      Prism" opens `/rebuild?url=<current>`.
+      UXC" opens `/rebuild?url=<current>`.
 
 ### Trust & moderation
 
@@ -166,6 +188,36 @@ Things we'd love to try but haven't committed to.
 
 ## Done (recent)
 
+- 2026-04 — QoL bundle. `/u/[username]` profiles now mount a
+  `<ProvenanceStrip>` of the user's public captures with lineage
+  grouping intact, plus a "· N public captures" stat in the profile
+  header. The dashboard strip is replaced by `<DashboardCapturesStrip>`
+  with a "Manage" toggle that turns thumbs into selectable targets and
+  surfaces a sticky toolbar driving `setInspirationsPublicBulk` (single
+  round-trip, RLS-double-guarded, 100-row cap). `/from-image` accepts a
+  `?ref=<inspirationId>` query param: the page server-fetches the
+  owner's row and hands a `ResumedInspiration` down to the studio so
+  the variant picker boots without a re-upload — the dashboard's
+  "Pending" thumbs now deep-link here, and pending captures preserve
+  `?ref=` across login. Activity migration `008_inspiration_activity.sql`
+  widens the `type` CHECK to add `inspiration_publish` and
+  `inspiration_cache_hit`, installs an `AFTER INSERT/UPDATE` trigger on
+  `inspirations` to log publishes, and replaces `bump_cache_hit()` so
+  the existing counter bump also writes a cache-hit event attributed
+  to the re-using viewer with the original author as
+  `target_user_id`. `<ActivityFeed>` renders both new event types with
+  hostname-only labels for URL sources (no leaked blob paths).
+- 2026-04 — Phase 3/4/5 close-the-loop. The dashboard captures strip
+  now groups "More like this" variants under their parent thumb
+  (newest root first, children oldest→newest, primary-tinted left
+  rail + "Variant N/M" badge). `/inspirations` gains a "Popular" tab
+  that filters and sorts by `cache_hit_count`, a five-bucket
+  dominant-hue chip set (Warm / Sun / Cool / Purple / Mono) computed
+  client-side from `signature.palette[0]` HSL, and a per-card
+  "· N reuses" pill on every row that's been hit. A new
+  `<MostRebuiltStrip>` hero sits above the feed and surfaces the top
+  six rows by `cache_hit_count` via the `inspirations_cache_hits_idx`
+  partial index from migration `007`.
 - 2026-04 — Phase 5 v1 — cross-user cache hits. `/api/inspire` and
   `/api/rebuild` now consult a public `inspirations.source_hash`
   lookup after the per-owner cache miss; on hit they clone the

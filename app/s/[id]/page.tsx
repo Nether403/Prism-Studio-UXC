@@ -43,8 +43,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     .select("headline, rationale, prompt")
     .eq("id", id)
     .maybeSingle()
-  if (!data) return { title: "Stack not found · Prism" }
-  const title = `${data.headline} · Prism`
+  if (!data) return { title: "Stack not found · UXC" }
+  const title = `${data.headline} · UXC`
   const description = data.rationale ?? data.prompt?.slice(0, 160)
   const canonical = `/s/${id}`
   return {
@@ -183,8 +183,8 @@ export default async function SharePage({
             datePublished: stack.created_at,
             mainEntityOfPage: `${SITE_URL}/s/${stack.id}`,
             image: `${SITE_URL}/api/og/stack/${stack.id}`,
-            author: { "@type": "Organization", name: "Prism" },
-            publisher: { "@type": "Organization", name: "Prism" },
+            author: { "@type": "Organization", name: "UXC" },
+            publisher: { "@type": "Organization", name: "UXC" },
             keywords: libraries.map((l) => l.name).join(", "),
           },
         ]}

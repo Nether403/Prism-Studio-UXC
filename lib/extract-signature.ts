@@ -104,7 +104,7 @@ async function decodeForPalette(bytes: ArrayBuffer) {
 //    what makes the eval baseline meaningful.
 // ---------------------------------------------------------------------------
 function buildSystemPrompt(): string {
-  return `You are Prism, a senior design director extracting a structured Signature from a single piece of visual reference.
+  return `You are UXC, a senior design director extracting a structured Signature from a single piece of visual reference.
 
 OUTPUT CONTRACT:
 - Fill every field in the schema. The Signature is consumed by a recommender that needs sharp, decisive answers.

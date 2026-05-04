@@ -6,11 +6,12 @@ import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
 import { DashboardList } from "@/components/dashboard-list"
 import { ActivityFeed, type ActivityEvent } from "@/components/activity-feed"
-import { ProvenanceStrip, type ProvenanceInspiration } from "@/components/provenance-thumb"
+import type { ProvenanceInspiration } from "@/components/provenance-thumb"
+import { DashboardCapturesStrip } from "@/components/dashboard-captures-strip"
 import type { Theme } from "@/lib/themes"
 
 export const metadata = {
-  title: "My Stacks · Prism",
+  title: "My Stacks · UXC",
   description: "Your saved stacks, drafts, and forks.",
 }
 
@@ -66,11 +67,16 @@ export default async function DashboardPage() {
     supabase
       .from("inspirations")
       .select(
-        "id,source_type,source_ref,screenshot_url,signature,generated_stack_id,is_public,created_at",
+        // `parent_inspiration_id` powers the v9 lineage grouping in
+        // <ProvenanceStrip/>. We bump the limit from 8 → 24 so a row with
+        // several "More like this" variants doesn't push its parent off the
+        // strip — without that, the grouping logic can't anchor variants to
+        // their root and they'd render as orphan thumbs.
+        "id,source_type,source_ref,screenshot_url,signature,generated_stack_id,is_public,parent_inspiration_id,created_at",
       )
       .eq("owner_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(8),
+      .limit(24),
   ])
 
   const rows: StackRow[] = (stacks ?? []) as StackRow[]
@@ -141,7 +147,10 @@ export default async function DashboardPage() {
       {inspirationRows.length > 0 && (
         <section className="relative pb-12">
           <div className="mx-auto max-w-6xl px-6">
-            <ProvenanceStrip inspirations={inspirationRows} stacksById={stacksById} editable />
+            <DashboardCapturesStrip
+              inspirations={inspirationRows}
+              stacksById={stacksById}
+            />
           </div>
         </section>
       )}

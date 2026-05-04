@@ -4,40 +4,56 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Dark editorial palette: black canvas, electric lime, warm orange */
-  --background: oklch(0.13 0.005 240);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.16 0.005 240);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.13 0.005 240);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.92 0.22 125);
-  --primary-foreground: oklch(0.13 0.005 240);
-  --secondary: oklch(0.22 0.01 240);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.2 0.005 240);
-  --muted-foreground: oklch(0.65 0.005 240);
-  --accent: oklch(0.72 0.2 45);
-  --accent-foreground: oklch(0.98 0 0);
+  /* UXC palette: warm-tinted dark canvas, coral-magenta primary,
+     deep-purple accent. Pulled from the brand sunset gradient — the
+     primary sits at the gradient's coral mid-stop (≈ #FF3D6A) and the
+     accent at its purple terminus (≈ #8E3FB5). All values OKLCH so the
+     AI theme generator keeps producing in-gamut variants. */
+  --background: oklch(0.13 0.012 30);
+  --foreground: oklch(0.97 0.005 70);
+  --card: oklch(0.16 0.014 30);
+  --card-foreground: oklch(0.97 0.005 70);
+  --popover: oklch(0.13 0.012 30);
+  --popover-foreground: oklch(0.97 0.005 70);
+  --primary: oklch(0.69 0.22 18);
+  --primary-foreground: oklch(0.13 0.012 30);
+  --secondary: oklch(0.22 0.014 30);
+  --secondary-foreground: oklch(0.97 0.005 70);
+  --muted: oklch(0.21 0.012 30);
+  --muted-foreground: oklch(0.66 0.012 50);
+  --accent: oklch(0.50 0.18 320);
+  --accent-foreground: oklch(0.97 0.005 70);
   --destructive: oklch(0.6 0.22 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.25 0.005 240);
-  --input: oklch(0.22 0.005 240);
-  --ring: oklch(0.92 0.22 125);
-  --chart-1: oklch(0.92 0.22 125);
-  --chart-2: oklch(0.72 0.2 45);
-  --chart-3: oklch(0.65 0.15 200);
-  --chart-4: oklch(0.55 0.18 280);
-  --chart-5: oklch(0.85 0.15 90);
+  --destructive-foreground: oklch(0.97 0.005 70);
+  --border: oklch(0.26 0.012 30);
+  --input: oklch(0.22 0.014 30);
+  --ring: oklch(0.69 0.22 18);
+  --chart-1: oklch(0.69 0.22 18);
+  --chart-2: oklch(0.74 0.18 50);
+  --chart-3: oklch(0.84 0.15 90);
+  --chart-4: oklch(0.55 0.20 350);
+  --chart-5: oklch(0.45 0.18 320);
   --radius: 0.625rem;
-  --sidebar: oklch(0.16 0.005 240);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.92 0.22 125);
-  --sidebar-primary-foreground: oklch(0.13 0.005 240);
-  --sidebar-accent: oklch(0.22 0.01 240);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.25 0.005 240);
-  --sidebar-ring: oklch(0.92 0.22 125);
+  --sidebar: oklch(0.16 0.014 30);
+  --sidebar-foreground: oklch(0.97 0.005 70);
+  --sidebar-primary: oklch(0.69 0.22 18);
+  --sidebar-primary-foreground: oklch(0.13 0.012 30);
+  --sidebar-accent: oklch(0.22 0.014 30);
+  --sidebar-accent-foreground: oklch(0.97 0.005 70);
+  --sidebar-border: oklch(0.26 0.012 30);
+  --sidebar-ring: oklch(0.69 0.22 18);
+
+  /* UXC brand sunset gradient. Used by the .brand-gradient utility
+     to render the wordmark and any "spectrum" brand surface. Stops
+     mirror the canonical reference: warm yellow → orange → coral
+     mid → magenta → deep purple. Hex values keep the gradient
+     identical regardless of theme overrides. */
+  --brand-gradient-stops:
+    #ffc857 0%,
+    #ff8a3d 22%,
+    #ff3d6a 55%,
+    #b13d8a 78%,
+    #5b2a86 100%;
 }
 
 /* Maps friendly font names → next/font CSS variables.
@@ -123,6 +139,22 @@
 }
 
 @layer utilities {
+  /* UXC brand wordmark gradient. Apply to inline text (e.g. <span>uxc</span>)
+     to render the canonical sunset spectrum via background-clip: text. The
+     gradient itself is theme-locked — overriding --primary/--accent for an
+     AI-generated stack does NOT shift the wordmark color, which keeps the
+     brand mark consistent across user-themed pages. */
+  .brand-gradient {
+    background-image: linear-gradient(135deg, var(--brand-gradient-stops));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .brand-gradient-bg {
+    background-image: linear-gradient(135deg, var(--brand-gradient-stops));
+  }
+
   .grain {
     position: relative;
   }

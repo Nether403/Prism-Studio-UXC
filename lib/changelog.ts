@@ -155,7 +155,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: "Foundation",
     date: "2026-03-18",
     summary:
-      "The first version of Prism: a brief in, a curated stack out, with a beautiful editorial homepage.",
+      "The first version of UXC: a brief in, a curated stack out, with a beautiful editorial homepage.",
     highlights: [
       {
         title: "Editorial homepage",

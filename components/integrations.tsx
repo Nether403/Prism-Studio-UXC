@@ -22,7 +22,7 @@ const INTEGRATIONS = [
   },
   {
     name: "Spline",
-    description: "Designer-friendly 3D scenes. Export a runtime URL and Prism wires it into your hero.",
+    description: "Designer-friendly 3D scenes. Export a runtime URL and UXC wires it into your hero.",
     icon: Boxes,
     auth: true,
     tier: "freemium",

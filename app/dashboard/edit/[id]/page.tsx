@@ -7,7 +7,7 @@ import { CommandPalette } from "@/components/command-palette"
 import { EditWorkbench } from "@/components/edit-workbench"
 import type { Theme } from "@/lib/themes"
 
-export const metadata = { title: "Edit stack · Prism" }
+export const metadata = { title: "Edit stack · UXC" }
 
 type StackRow = {
   id: string

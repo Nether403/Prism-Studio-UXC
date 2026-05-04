@@ -1,9 +1,15 @@
 import Link from "next/link"
-import { Heart, GitFork, Save, Send } from "lucide-react"
+import { Heart, GitFork, Save, Send, Image as ImageIcon, Repeat } from "lucide-react"
 
 export type ActivityEvent = {
   id: number
-  type: "save" | "publish" | "like" | "fork"
+  type:
+    | "save"
+    | "publish"
+    | "like"
+    | "fork"
+    | "inspiration_publish"
+    | "inspiration_cache_hit"
   created_at: string
   stack_id: string | null
   metadata: Record<string, unknown> | null
@@ -25,6 +31,8 @@ const ICONS = {
   publish: Send,
   like: Heart,
   fork: GitFork,
+  inspiration_publish: ImageIcon,
+  inspiration_cache_hit: Repeat,
 } as const
 
 const VERBS: Record<ActivityEvent["type"], string> = {
@@ -32,6 +40,8 @@ const VERBS: Record<ActivityEvent["type"], string> = {
   publish: "published",
   like: "liked",
   fork: "forked",
+  inspiration_publish: "published a capture",
+  inspiration_cache_hit: "re-used a capture from",
 }
 
 export function ActivityFeed({
@@ -55,14 +65,29 @@ export function ActivityFeed({
     <ul className="divide-y divide-border rounded-md border border-border bg-muted/20">
       {events.map((e) => {
         const Icon = ICONS[e.type] ?? Save
-        const headline =
-          (e.metadata && typeof (e.metadata as { headline?: unknown }).headline === "string"
-            ? ((e.metadata as { headline: string }).headline as string)
-            : null) ?? "a stack"
         const actorName =
           e.actor?.display_name?.trim() ||
           e.actor?.username ||
           "someone"
+        const isInspiration =
+          e.type === "inspiration_publish" || e.type === "inspiration_cache_hit"
+
+        // For stack events the noun is the stack headline ("liked Studio
+        // Sienna"). For inspiration events it's the captured source — a
+        // hostname for URLs, "image" for uploads — so the row reads
+        // "@alex re-used a capture from mobbin.com".
+        const objectLabel = isInspiration
+          ? inspirationLabel(e.metadata)
+          : (typeof (e.metadata as { headline?: unknown } | null)?.headline === "string"
+              ? ((e.metadata as { headline: string }).headline as string)
+              : "a stack")
+
+        // Stack events still link to /s/<id>. Inspiration events link to
+        // their generated stack (via stack_id) when present, otherwise
+        // they're just text — captures without a saved stack don't have
+        // a public surface to point at.
+        const objectHref = e.stack_id ? `/s/${e.stack_id}` : null
+
         return (
           <li key={e.id} className="flex items-center gap-3 px-4 py-3 text-sm">
             <span
@@ -89,16 +114,16 @@ export function ActivityFeed({
                   </>
                 )}
                 <span className="text-muted-foreground">{VERBS[e.type]} </span>
-                {e.stack_id ? (
+                {objectHref ? (
                   <Link
-                    href={`/s/${e.stack_id}`}
+                    href={objectHref}
                     className="hover:underline"
                     data-cursor="hover"
                   >
-                    {headline}
+                    {objectLabel}
                   </Link>
                 ) : (
-                  <span>{headline}</span>
+                  <span>{objectLabel}</span>
                 )}
               </p>
             </div>
@@ -113,4 +138,27 @@ export function ActivityFeed({
       })}
     </ul>
   )
+}
+
+/**
+ * Render a short, human-friendly label for an inspiration event. URL
+ * captures collapse to a hostname; image uploads render as "an image" so
+ * we never leak a private blob path or filename into the public feed.
+ */
+function inspirationLabel(metadata: Record<string, unknown> | null): string {
+  const sourceType =
+    typeof metadata?.source_type === "string" ? (metadata.source_type as string) : null
+  const sourceRef =
+    typeof metadata?.source_ref === "string" ? (metadata.source_ref as string) : null
+
+  if (sourceType === "url" || sourceType === "og") {
+    if (!sourceRef) return "a website"
+    try {
+      return new URL(sourceRef).hostname.replace(/^www\./, "")
+    } catch {
+      return "a website"
+    }
+  }
+  if (sourceType === "image") return "an image"
+  return "a capture"
 }

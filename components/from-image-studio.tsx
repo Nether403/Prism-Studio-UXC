@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils"
 import { LIBRARIES } from "@/lib/stack-data"
 import { DEFAULT_THEME, type Theme } from "@/lib/themes"
 import { recommend } from "@/lib/recommend"
-import { signatureToV0DeepLink, type Signature } from "@/lib/signature"
+import { signatureToV0DeepLink, type Signature, type SourceType } from "@/lib/signature"
 import { saveStack } from "@/app/actions/stack"
 import { linkInspirationToStack } from "@/app/actions/inspiration"
 import { SignatureCard } from "@/components/signature-card"
@@ -28,6 +28,21 @@ import type { GenerateResponse, GenerateTheme } from "@/lib/generate-schema"
 import { listAllowedOgDomains } from "@/lib/og"
 
 type Phase = "idle" | "extracting" | "ready" | "saving"
+
+/**
+ * Pre-extracted inspiration handed in by the page when the user clicks
+ * "Resume" on a pending capture from their dashboard. Lets the studio
+ * skip the upload UI and jump straight into the variant picker without
+ * re-running /api/inspire.
+ */
+export type ResumedInspiration = {
+  inspirationId: string
+  sourceType: SourceType
+  sourceRef: string
+  /** Public Blob URL for image uploads, OG image URL for url/og captures. */
+  screenshotUrl: string | null
+  signature: Signature
+}
 
 function aiThemeToTheme(t: GenerateTheme): Theme {
   return {
@@ -49,14 +64,37 @@ function aiThemeToTheme(t: GenerateTheme): Theme {
   }
 }
 
-export function FromImageStudio({ userEmail }: { userEmail: string | null }) {
+export function FromImageStudio({
+  userEmail,
+  resumed = null,
+}: {
+  userEmail: string | null
+  /**
+   * When set, the studio boots straight into "ready" phase with this
+   * inspiration's signature already loaded. Sourced from
+   * /from-image?ref=<inspirationId>; the page server-fetches the row,
+   * verifies ownership, and hands it down.
+   */
+  resumed?: ResumedInspiration | null
+}) {
   const router = useRouter()
-  const [phase, setPhase] = useState<Phase>("idle")
+  // All initial state is conditional on `resumed` so a deep-link to a
+  // pending capture skips the upload UI entirely. Lazy initializers keep
+  // these branches off the render path on subsequent renders.
+  const [phase, setPhase] = useState<Phase>(() => (resumed ? "ready" : "idle"))
   const [error, setError] = useState<string | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [signature, setSignature] = useState<Signature | null>(null)
-  const [inspirationId, setInspirationId] = useState<string | null>(null)
-  const [editedBrief, setEditedBrief] = useState<string>("")
+  const [previewUrl, setPreviewUrl] = useState<string | null>(
+    () => resumed?.screenshotUrl ?? null,
+  )
+  const [signature, setSignature] = useState<Signature | null>(
+    () => resumed?.signature ?? null,
+  )
+  const [inspirationId, setInspirationId] = useState<string | null>(
+    () => resumed?.inspirationId ?? null,
+  )
+  const [editedBrief, setEditedBrief] = useState<string>(
+    () => resumed?.signature.brief ?? "",
+  )
   const [ogUrl, setOgUrl] = useState("")
   /**
    * Phase 5: when set, the most recent /api/inspire response was reused
@@ -129,7 +167,7 @@ export function FromImageStudio({ userEmail }: { userEmail: string | null }) {
         if (json.cachedFromPublic) {
           setCachedFromPublic({ hits: json.cacheHits ?? 0 })
           toast.info("Cached from public capture", {
-            description: "Reusing a signature another Prism user already published.",
+            description: "Reusing a signature another UXC user already published.",
           })
         } else if (json.cached) {
           toast.info("Pulled from cache", {
@@ -480,7 +518,7 @@ export function FromImageStudio({ userEmail }: { userEmail: string | null }) {
               <div className="space-y-1">
                 <p className="text-sm font-medium">Cached from a public capture</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Reusing a signature another Prism user already published.
+                  Reusing a signature another UXC user already published.
                   {cachedFromPublic.hits > 0 && (
                     <>
                       {" "}

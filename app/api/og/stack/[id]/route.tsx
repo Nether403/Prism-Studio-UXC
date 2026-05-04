@@ -28,7 +28,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     .maybeSingle()
 
   const row = data as StackRow | null
-  const title = row?.title || row?.headline || "Prism Studio"
+  const title = row?.title || row?.headline || "UXC"
   const theme = row?.theme
   const libNames = (row?.stack_ids ?? [])
     .map((sid) => LIBRARIES.find((l) => l.id === sid)?.name)
@@ -91,7 +91,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
                 display: "flex",
               }}
             />
-            <span>Prism Studio</span>
+            <span>UXC</span>
           </div>
           <div style={{ display: "flex" }}>/{row?.id ?? "—"}</div>
         </div>

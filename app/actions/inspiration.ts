@@ -206,6 +206,55 @@ export async function setInspirationPublic(
   return { ok: true }
 }
 
+export type BulkPrivacyResult = { ok: true; updated: number } | { error: string }
+
+/**
+ * Flip `is_public` on a batch of inspirations the caller owns.
+ *
+ * The dashboard "manage privacy" mode collects a set of selected captures
+ * and dispatches them in a single round-trip rather than firing N parallel
+ * server actions. RLS still enforces ownership row-by-row, but we double
+ * up with `eq("owner_id", user.id)` so a malicious payload of foreign ids
+ * never even hits the policy layer.
+ *
+ * Empty arrays no-op cleanly so the client can call this without first
+ * gating on selection length.
+ */
+export async function setInspirationsPublicBulk(
+  inspirationIds: string[],
+  isPublic: boolean,
+): Promise<BulkPrivacyResult> {
+  if (!Array.isArray(inspirationIds) || inspirationIds.length === 0) {
+    return { ok: true, updated: 0 }
+  }
+  // Defensive cap — the strip surfaces 24 rows max, so any payload above
+  // that is either a UI bug or someone poking the action directly.
+  if (inspirationIds.length > 100) {
+    return { error: "Too many inspirations selected" }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "Sign in" }
+
+  const { data, error } = await supabase
+    .from("inspirations")
+    .update({ is_public: isPublic })
+    .in("id", inspirationIds)
+    .eq("owner_id", user.id)
+    .select("id")
+
+  if (error) {
+    console.error("[v0] setInspirationsPublicBulk error:", error)
+    return { error: error.message }
+  }
+
+  revalidatePath("/dashboard")
+  return { ok: true, updated: data?.length ?? 0 }
+}
+
 export async function deleteInspiration(inspirationId: string): Promise<InspirationResult> {
   const supabase = await createClient()
   const {

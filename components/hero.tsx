@@ -58,19 +58,19 @@ export function Hero() {
         <div className="max-w-4xl">
           <div className="hero-eyebrow inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/40 backdrop-blur px-3 py-1 text-xs font-mono tracking-wide text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-glow" />
-            v1.0 · visual stack generator
+            v1.0 · UX curator
           </div>
 
           <h1 className="mt-8 font-display text-[clamp(3rem,9vw,8.5rem)] leading-[0.92] tracking-[-0.04em] text-balance">
-            <span className="hero-line block">Compose interfaces</span>
+            <span className="hero-line block">Curate interfaces</span>
             <span className="hero-line block">
-              that <em className="italic font-display text-primary">refract</em> ideas
+              from a <em className="italic font-display text-primary">single</em> brief
             </span>
-            <span className="hero-line block text-muted-foreground">into pixels.</span>
+            <span className="hero-line block text-muted-foreground">— stack and all.</span>
           </h1>
 
           <p className="hero-sub mt-8 max-w-xl text-lg md:text-xl text-muted-foreground leading-relaxed text-pretty">
-            Prism reads your brief and assembles the most visually striking combination of
+            UXC reads your brief and assembles the most visually striking combination of
             best-in-class libraries — Three.js, GSAP, Shadcn, Tailwind, Lenis, Next.js — tuned
             for impact, performance, and your vibe.
           </p>

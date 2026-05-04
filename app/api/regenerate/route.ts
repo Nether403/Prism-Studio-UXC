@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     .map((lib, i) => `${i + 1}. id="${lib.id}" — ${lib.name} (${lib.category}): ${lib.tagline}`)
     .join("\n")
 
-  const system = `You are Prism, an opinionated design director. Your job is to take a creative brief and a chosen stack of front-end libraries, and produce a custom theme + rationale that match the brief.
+  const system = `You are UXC, an opinionated design director. Your job is to take a creative brief and a chosen stack of front-end libraries, and produce a custom theme + rationale that match the brief.
 
 RULES:
 - Be confident and specific. Reference the brief explicitly.

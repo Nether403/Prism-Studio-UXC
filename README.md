@@ -1,8 +1,14 @@
-# Prism Studio
+# UXC
 
-> Generate cohesive design + tech stacks from a prompt, a URL, or an image.
+> The UX curator. Generate cohesive design + tech stacks from a prompt, a URL, or an image.
 
-Prism Studio is an AI-powered design lab that turns vague creative briefs into
+> **Note on naming.** This project was previously called *Prism Studio*. It was
+> renamed to **UXC** (UX Curator) in April 2026 to avoid trademark conflict
+> with existing "Prism" brands. The GitHub repository slug — `Prism-Studio-UXC`
+> — is retained for git history; everything user-facing is now UXC. The
+> production site lives at [uxc.me](https://uxc.me).
+
+UXC is an AI-powered design lab that turns vague creative briefs into
 concrete, opinionated stack recommendations — typography, color, motion,
 component library, and the rationale behind every pick. It ships with three
 ingestion modes (prompt, URL rebuild, image extraction), a public gallery
@@ -37,7 +43,7 @@ system that traces every generated stack back to its source.
 
 - **Prompt-first generator** at `/` — describe a vibe, get a full stack with
   reasoning, perf budget, and impact score.
-- **Rebuild from URL** at `/rebuild` — paste any public site, Prism captures a
+- **Rebuild from URL** at `/rebuild` — paste any public site, UXC captures a
   screenshot, extracts the canonical signature (palette, type, vibe statement,
   content signature), and re-imagines it as a fresh stack.
 - **From image** at `/from-image` — upload a reference image, get a signature
@@ -81,7 +87,7 @@ system that traces every generated stack back to its source.
 
 - Editorial **recipes** at `/recipes/[slug]` — long-form writeups that pair
   a generated stack with implementation notes.
-- **Library** at `/library/[id]` — the catalog of every stack option Prism
+- **Library** at `/library/[id]` — the catalog of every stack option UXC
   can pick from (frameworks, motion libs, type, color systems).
 - **Embed view** at `/s/[id]/embed` — minimal iframeable view for sharing
   in Notion, Figma, Linear, etc.

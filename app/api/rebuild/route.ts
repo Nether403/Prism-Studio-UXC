@@ -332,7 +332,7 @@ export async function POST(req: Request) {
 
 function makeWatermark(hostname: string) {
   return {
-    label: "Prism reinterpretation",
+    label: "UXC reinterpretation",
     sourceHostname: hostname,
     disclaimer: `Not affiliated with ${hostname}. Source captured via public crawl.`,
   }

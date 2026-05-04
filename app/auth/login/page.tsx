@@ -5,7 +5,7 @@ import { LoginForm } from "@/components/login-form"
 import { Spinner } from "@/components/ui/spinner"
 
 export const metadata = {
-  title: "Sign in · Prism",
+  title: "Sign in · UXC",
   description: "Sign in to save stacks, fork from the gallery, and publish to your profile.",
 }
 
