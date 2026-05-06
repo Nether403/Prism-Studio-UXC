@@ -195,9 +195,9 @@ function RadixDemo() {
   }, [])
   return (
     <div className="flex h-full items-center justify-center">
-      <motion.div
-        animate={{ backgroundColor: on ? "var(--primary)" : "var(--muted)" }}
-        className="relative h-6 w-12 rounded-full"
+      <div
+        className="relative h-6 w-12 rounded-full transition-colors duration-300"
+        style={{ backgroundColor: on ? "oklch(0.69 0.22 18)" : "oklch(0.21 0.012 30)" }}
       >
         <motion.div
           className="absolute top-0.5 h-5 w-5 rounded-full bg-foreground"
@@ -205,7 +205,7 @@ function RadixDemo() {
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
           style={{ background: "var(--background)" }}
         />
-      </motion.div>
+      </div>
     </div>
   )
 }
