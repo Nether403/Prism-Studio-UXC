@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { Layers, Loader2, Wand2, ArrowRight, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LIBRARIES } from "@/lib/stack-data"
@@ -55,8 +56,14 @@ export function VariantPicker({ prompt, vibe, audience, includePaid, onPick }: V
   const [loading, setLoading] = useState(false)
   const [variants, setVariants] = useState<Variant[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   const requestId = useRef(0)
+
+  // Track mount state for portal
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   async function start() {
     setOpen(true)
@@ -111,17 +118,18 @@ export function VariantPicker({ prompt, vibe, audience, includePaid, onPick }: V
         Generate 3 variants
       </Button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-background/85 backdrop-blur-sm p-4 md:p-8"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setOpen(false)
-            }}
-          >
+      {mounted && createPortal(
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/85 backdrop-blur-sm p-4 md:p-8"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setOpen(false)
+              }}
+            >
             <motion.div
               initial={{ scale: 0.96, opacity: 0, y: 12 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -202,8 +210,10 @@ export function VariantPicker({ prompt, vibe, audience, includePaid, onPick }: V
               </div>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   )
 }
