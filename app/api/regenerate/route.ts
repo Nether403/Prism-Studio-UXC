@@ -1,4 +1,4 @@
-import { generateObject } from "ai"
+import { generateText, Output } from "ai"
 import { z } from "zod"
 import { recommend, type GeneratorInput } from "@/lib/recommend"
 import { generateResponseSchema } from "@/lib/generate-schema"
@@ -83,15 +83,15 @@ Produce headline, rationale, per-library reasons, and a custom theme${
   }.`
 
   try {
-    const { object } = await withFallback((model) =>
-      generateObject({
+    const { output } = await withFallback((model) =>
+      generateText({
         model,
         system,
         prompt: userPrompt,
-        schema: generateResponseSchema,
+        output: Output.object({ schema: generateResponseSchema }),
       })
     )
-    return Response.json(object)
+    return Response.json(output)
   } catch (e) {
     console.error("[v0] regenerate error", e)
     return Response.json({ error: "Generation failed" }, { status: 500 })

@@ -263,14 +263,16 @@ ${stackList}
 Produce headline, rationale, per-library reasons, and a custom theme that fits this variant's character.`
 
       try {
-        const { object } = await withFallback((model) =>
-          generateObject({
+        console.log(`[v0] Starting generation for variant: ${mode.id}`)
+        const { object } = await withFallback((model) => {
+          console.log(`[v0] Calling generateObject for ${mode.id}`)
+          return generateObject({
             model,
             system,
             prompt: userPrompt,
             schema: generateResponseSchema,
           })
-        )
+        })
 
         const stackIds = stack.map((s) => s.id)
         const perfReport = computePerfReport(stackIds)
@@ -285,7 +287,10 @@ Produce headline, rationale, per-library reasons, and a custom theme that fits t
           ai: object as GenerateResponse,
         }
       } catch (e) {
-        console.error("[v0] variant generation failed", mode.id, e)
+        const errorMessage = e instanceof Error ? e.message : String(e)
+        const errorStack = e instanceof Error ? e.stack : undefined
+        console.error(`[v0] variant generation failed for ${mode.id}:`, errorMessage)
+        if (errorStack) console.error(`[v0] Stack trace:`, errorStack)
         return {
           mode: mode.id,
           label: mode.label,

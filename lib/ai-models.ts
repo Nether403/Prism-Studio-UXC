@@ -29,7 +29,10 @@ export const MODEL_ID = "google/gemini-3.1-pro-preview"
 export const MODEL_ID_DATED = "google/gemini-3.1-pro-preview-20260219"
 
 // For direct Google API access (AI Studio / Gemini API keys)
+// Note: Google's API uses model IDs without the "google/" prefix
 const GOOGLE_MODEL_ID = "gemini-3.1-pro-preview"
+// Alternative dated version if needed
+const GOOGLE_MODEL_ID_DATED = "gemini-3.1-pro-preview-20260219"
 
 type ProviderType = "openrouter" | "google-ai-studio" | "google-direct"
 
@@ -70,17 +73,22 @@ export function getAvailableProvider(): {
   modelId: string
   type: ProviderType
 } {
+  console.log("[v0] Checking available AI providers...")
   for (const config of PROVIDER_CHAIN) {
     const apiKey = process.env[config.envVar]
     if (apiKey) {
+      console.log(`[v0] Using provider: ${config.type} with model: ${config.modelId}`)
       return {
         provider: config.createProvider(apiKey),
         modelId: config.modelId,
         type: config.type,
       }
+    } else {
+      console.log(`[v0] Provider ${config.type} not available (missing ${config.envVar})`)
     }
   }
 
+  console.error("[v0] No AI API keys configured!")
   throw new Error(
     "No AI API key configured. Please set one of: OPENROUTER_API_KEY, AI_STUDIO_GEMINI_API_KEY, or GEMINI_API_KEY"
   )
@@ -112,24 +120,45 @@ export async function withFallback<T>(
   operation: (model: ReturnType<typeof getModel>) => Promise<T>
 ): Promise<T> {
   const errors: Error[] = []
+  let attemptedProviders = 0
+
+  console.log("[v0] withFallback: Starting provider fallback chain...")
 
   for (const config of PROVIDER_CHAIN) {
     const apiKey = process.env[config.envVar]
-    if (!apiKey) continue
+    if (!apiKey) {
+      console.log(`[v0] withFallback: Skipping ${config.type} (no API key)`)
+      continue
+    }
+
+    attemptedProviders++
+    console.log(`[v0] withFallback: Attempting ${config.type} with model ${config.modelId}...`)
 
     try {
       const provider = config.createProvider(apiKey)
       const model = provider(config.modelId)
-      return await operation(model)
+      const result = await operation(model)
+      console.log(`[v0] withFallback: Success with ${config.type}!`)
+      return result
     } catch (error) {
-      console.error(`[v0] AI call failed with ${config.type}:`, error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(`[v0] withFallback: ${config.type} FAILED:`, errorMessage)
+      if (error instanceof Error && error.stack) {
+        console.error(`[v0] Stack trace:`, error.stack)
+      }
       errors.push(error instanceof Error ? error : new Error(String(error)))
       // Continue to next provider
     }
   }
 
   // All providers failed
+  if (attemptedProviders === 0) {
+    console.error("[v0] withFallback: No API keys configured for any provider!")
+    throw new Error("No AI API key configured. Please set one of: OPENROUTER_API_KEY, AI_STUDIO_GEMINI_API_KEY, or GEMINI_API_KEY")
+  }
+
   const errorMessages = errors.map((e, i) => `${PROVIDER_CHAIN[i]?.type}: ${e.message}`).join("; ")
+  console.error(`[v0] withFallback: All ${attemptedProviders} providers failed. Errors: ${errorMessages}`)
   throw new Error(`All AI providers failed. Errors: ${errorMessages}`)
 }
 
