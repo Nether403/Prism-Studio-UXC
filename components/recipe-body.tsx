@@ -158,7 +158,7 @@ export function RecipeBody({
                       <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                         {lib.category}
                       </span>
-                      {lib.requiresAccount && (
+                      {lib.requiresAuth && (
                         <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-amber-300">
                           Account
                         </span>

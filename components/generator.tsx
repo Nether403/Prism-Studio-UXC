@@ -113,14 +113,14 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
     isLoading,
     error,
     stop,
-  } = useObject<GenerateResponse>({
+  } = useObject({
     api: "/api/generate",
     schema: generateResponseSchema,
   })
 
   // Display either a picked variant or the live stream.
   const object: Partial<GenerateResponse> | null | undefined =
-    manualResult ?? streamObject
+    (manualResult ?? streamObject) as any
 
   function handleGenerate() {
     const rec = recommend(input)
@@ -676,7 +676,7 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const spec = buildSpec(recommendation, object)
+                            const spec = buildSpec(recommendation, object || undefined)
                             navigator.clipboard.writeText(spec)
                             toast.success("Spec copied to clipboard")
                           }}

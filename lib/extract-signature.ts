@@ -23,7 +23,7 @@ import {
   type PaletteSwatch,
 } from "@/lib/signature"
 import {
-  extractPaletteFromPixels,
+  kmeansPalette,
   assignRoles,
   hexToRgb,
   type RawPalette,
@@ -171,7 +171,7 @@ export async function extractSignature(
 
   // Decode + palette extraction (deterministic, sharp-backed).
   const { pixels, inferredMediaType } = await decodeForPalette(input.imageBytes)
-  const rawPalette: RawPalette = extractPaletteFromPixels(pixels, { k: 5 })
+  const rawPalette: RawPalette = kmeansPalette(pixels, 5)
   const deterministicPalette = assignRoles(rawPalette)
 
   const paletteList = deterministicPalette

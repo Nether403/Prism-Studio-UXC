@@ -171,8 +171,8 @@ export async function POST(req: Request) {
 
       const input: GeneratorInput = {
         prompt: baseInput.prompt!,
-        vibe: mode.vibeShift ?? baseInput.vibe!,
-        audience: baseInput.audience!,
+        vibe: (mode.vibeShift ?? baseInput.vibe) as Vibe,
+        audience: baseInput.audience as any,
         performance: mode.perf,
         includePaid: baseInput.includePaid,
         motionLevel: effectiveMotion,
@@ -299,7 +299,7 @@ Produce headline, rationale, per-library reasons, and a custom theme that fits t
           perfReport: computePerfReport(stack.map((s) => s.id)),
           impactScore: rec.impactScore,
           ai: null as GenerateResponse | null,
-          error: "Generation failed for this variant.",
+          error: `Generation failed for this variant: ${errorMessage}`,
         }
       }
     }),

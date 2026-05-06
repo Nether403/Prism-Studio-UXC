@@ -24,7 +24,7 @@ export async function GET(
     return new Response("Not found", { status: 404 })
   }
 
-  const palette = palettes[recipe.vibe] ?? palettes.minimal
+  const palette = palettes[recipe.input.vibe] ?? palettes.minimal
   const { bg, fg, primary, accent } = palette
 
   return new ImageResponse(
@@ -93,7 +93,7 @@ export async function GET(
             color: accent,
           }}
         >
-          Recipe · {recipe.vibe}
+          Recipe · {recipe.input.vibe}
         </div>
       </div>
 
@@ -145,9 +145,9 @@ export async function GET(
         }}
       >
         <div style={{ display: "flex", gap: "24px" }}>
-          <span>{recipe.audience}</span>
+          <span>{recipe.input.audience}</span>
           <span style={{ opacity: 0.4 }}>·</span>
-          <span>{recipe.performance} budget</span>
+          <span>{recipe.input.performance} budget</span>
         </div>
         <div style={{ display: "flex" }}>uxc.me</div>
       </div>

@@ -28,7 +28,7 @@ type ExportActionsProps = {
 export function ExportActions({ input, ready, className }: ExportActionsProps) {
   const [busy, setBusy] = useState<null | "v0" | "zip" | "stackblitz" | "copy">(null)
 
-  function guard(): input is NonNullable<ExportInput> {
+  function guard(): boolean {
     if (!ready || !input) {
       toast.error("Wait for the stack to compose first.")
       return false

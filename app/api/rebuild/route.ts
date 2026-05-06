@@ -227,7 +227,7 @@ export async function POST(req: Request) {
 
   // ── 7. Capture + scrape in parallel ──────────────────────────────────────
   const [captureResult, scrapeResult] = await Promise.allSettled([
-    captureScreenshot(normalized),
+    captureScreenshot({ url: normalized }),
     scrapeContent(url),
   ])
 
@@ -322,7 +322,7 @@ export async function POST(req: Request) {
   return Response.json({
     inspirationId: insert.data.id,
     signature,
-    screenshot: { url: capture.pngUrl, width: capture.width, height: capture.height },
+    screenshot: { url: capture.pngUrl, width: 1280, height: 800 },
     content: scrape?.ok ? scrape.content : null,
     watermark: makeWatermark(hostname),
     quota: postQuota,

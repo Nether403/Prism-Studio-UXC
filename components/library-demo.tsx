@@ -169,8 +169,8 @@ function ShadcnDemo() {
                 : v === "default"
                 ? "var(--primary)"
                 : v === "outline"
-                ? "transparent"
-                : "transparent",
+                ? "rgba(0,0,0,0)"
+                : "rgba(0,0,0,0)",
             }}
             className={`h-7 rounded px-2.5 text-[10px] font-medium leading-7 ${
               v === "outline" ? "border border-border" : ""
