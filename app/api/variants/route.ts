@@ -6,6 +6,7 @@ import { LIBRARIES } from "@/lib/stack-data"
 import { computePerfReport } from "@/lib/bundle-sizes"
 import { createClient } from "@/lib/supabase/server"
 import { signatureSchema, type Signature } from "@/lib/signature"
+import { withFallback } from "@/lib/ai-models"
 
 export const maxDuration = 30
 
@@ -262,11 +263,15 @@ ${stackList}
 Produce headline, rationale, per-library reasons, and a custom theme that fits this variant's character.`
 
       try {
-        const { object } = await generateObject({
-          model: "openai/gpt-5-mini",
-          system,
-          prompt: userPrompt,
-          schema: generateResponseSchema,
+        console.log(`[v0] Starting generation for variant: ${mode.id}`)
+        const { object } = await withFallback((model) => {
+          console.log(`[v0] Calling generateObject for ${mode.id}`)
+          return generateObject({
+            model,
+            system,
+            prompt: userPrompt,
+            schema: generateResponseSchema,
+          })
         })
 
         const stackIds = stack.map((s) => s.id)
@@ -282,7 +287,10 @@ Produce headline, rationale, per-library reasons, and a custom theme that fits t
           ai: object as GenerateResponse,
         }
       } catch (e) {
-        console.error("[v0] variant generation failed", mode.id, e)
+        const errorMessage = e instanceof Error ? e.message : String(e)
+        const errorStack = e instanceof Error ? e.stack : undefined
+        console.error(`[v0] variant generation failed for ${mode.id}:`, errorMessage)
+        if (errorStack) console.error(`[v0] Stack trace:`, errorStack)
         return {
           mode: mode.id,
           label: mode.label,

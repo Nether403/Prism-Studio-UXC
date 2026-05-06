@@ -2,6 +2,7 @@ import { streamText, Output } from "ai"
 import { z } from "zod"
 import { recommend, type GeneratorInput } from "@/lib/recommend"
 import { generateResponseSchema } from "@/lib/generate-schema"
+import { getModel } from "@/lib/ai-models"
 
 export const maxDuration = 30
 
@@ -68,7 +69,7 @@ ${stackList}
 Produce headline, rationale, per-library reasons, and a custom theme that matches the brief.`
 
   const result = streamText({
-    model: "openai/gpt-5-mini",
+    model: getModel(),
     system,
     prompt: userPrompt,
     output: Output.object({ schema: generateResponseSchema }),

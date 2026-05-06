@@ -1,8 +1,9 @@
-import { generateObject } from "ai"
+import { generateText, Output } from "ai"
 import { z } from "zod"
 import { recommend, type GeneratorInput } from "@/lib/recommend"
 import { generateResponseSchema } from "@/lib/generate-schema"
 import { LIBRARIES } from "@/lib/stack-data"
+import { withFallback } from "@/lib/ai-models"
 
 export const maxDuration = 30
 
@@ -82,13 +83,15 @@ Produce headline, rationale, per-library reasons, and a custom theme${
   }.`
 
   try {
-    const { object } = await generateObject({
-      model: "openai/gpt-5-mini",
-      system,
-      prompt: userPrompt,
-      schema: generateResponseSchema,
-    })
-    return Response.json(object)
+    const { output } = await withFallback((model) =>
+      generateText({
+        model,
+        system,
+        prompt: userPrompt,
+        output: Output.object({ schema: generateResponseSchema }),
+      })
+    )
+    return Response.json(output)
   } catch (e) {
     console.error("[v0] regenerate error", e)
     return Response.json({ error: "Generation failed" }, { status: 500 })
