@@ -2,7 +2,7 @@ import { streamText, Output } from "ai"
 import { z } from "zod"
 import { recommend, type GeneratorInput } from "@/lib/recommend"
 import { generateResponseSchema } from "@/lib/generate-schema"
-import { getOpenRouter, MODELS } from "@/lib/ai-models"
+import { getModel } from "@/lib/ai-models"
 
 export const maxDuration = 30
 
@@ -68,9 +68,8 @@ ${stackList}
 
 Produce headline, rationale, per-library reasons, and a custom theme that matches the brief.`
 
-  const openrouter = getOpenRouter()
   const result = streamText({
-    model: openrouter(MODELS.streaming.primary),
+    model: getModel(),
     system,
     prompt: userPrompt,
     output: Output.object({ schema: generateResponseSchema }),

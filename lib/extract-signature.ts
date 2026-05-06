@@ -28,7 +28,7 @@ import {
   hexToRgb,
   type RawPalette,
 } from "@/lib/palette"
-import { getOpenRouter, MODELS } from "@/lib/ai-models"
+import { getModel } from "@/lib/ai-models"
 
 // LLM step omits `source` (caller attaches) but keeps everything else,
 // including `palette`, so Gemini has a slot to copy our deterministic hexes
@@ -167,10 +167,7 @@ function buildUserPrompt(input: ExtractSignatureInput, paletteList: string): str
 // ---------------------------------------------------------------------------
 export async function extractSignature(
   input: ExtractSignatureInput,
-  opts?: { model?: string },
 ): Promise<ExtractSignatureResult> {
-  const openrouter = getOpenRouter()
-  const modelId = opts?.model ?? MODELS.vision.primary
 
   // Decode + palette extraction (deterministic, sharp-backed).
   const { pixels, inferredMediaType } = await decodeForPalette(input.imageBytes)
@@ -184,7 +181,7 @@ export async function extractSignature(
   // Multimodal call.
   const mediaType = input.mediaType ?? inferredMediaType ?? "image/png"
   const { output } = await generateText({
-    model: openrouter(modelId),
+    model: getModel(),
     output: Output.object({ schema: generationSchema }),
     messages: [
       {

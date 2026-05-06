@@ -3,7 +3,7 @@ import { z } from "zod"
 import { recommend, type GeneratorInput } from "@/lib/recommend"
 import { generateResponseSchema } from "@/lib/generate-schema"
 import { LIBRARIES } from "@/lib/stack-data"
-import { getOpenRouter, MODELS } from "@/lib/ai-models"
+import { withFallback } from "@/lib/ai-models"
 
 export const maxDuration = 30
 
@@ -83,13 +83,14 @@ Produce headline, rationale, per-library reasons, and a custom theme${
   }.`
 
   try {
-    const openrouter = getOpenRouter()
-    const { object } = await generateObject({
-      model: openrouter(MODELS.structured.primary),
-      system,
-      prompt: userPrompt,
-      schema: generateResponseSchema,
-    })
+    const { object } = await withFallback((model) =>
+      generateObject({
+        model,
+        system,
+        prompt: userPrompt,
+        schema: generateResponseSchema,
+      })
+    )
     return Response.json(object)
   } catch (e) {
     console.error("[v0] regenerate error", e)

@@ -12,6 +12,7 @@
     "evals:diff": "tsx --tsconfig tsconfig.json scripts/evals/diff-evals.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.2.0",
     "@ai-sdk/react": "^3.0.170",
     "@openrouter/ai-sdk-provider": "^0.4.3",
     "@hookform/resolvers": "^3.9.1",

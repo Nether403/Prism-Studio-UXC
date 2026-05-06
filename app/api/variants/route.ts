@@ -6,7 +6,7 @@ import { LIBRARIES } from "@/lib/stack-data"
 import { computePerfReport } from "@/lib/bundle-sizes"
 import { createClient } from "@/lib/supabase/server"
 import { signatureSchema, type Signature } from "@/lib/signature"
-import { getOpenRouter, MODELS } from "@/lib/ai-models"
+import { withFallback } from "@/lib/ai-models"
 
 export const maxDuration = 30
 
@@ -263,13 +263,14 @@ ${stackList}
 Produce headline, rationale, per-library reasons, and a custom theme that fits this variant's character.`
 
       try {
-        const openrouter = getOpenRouter()
-        const { object } = await generateObject({
-          model: openrouter(MODELS.structured.primary),
-          system,
-          prompt: userPrompt,
-          schema: generateResponseSchema,
-        })
+        const { object } = await withFallback((model) =>
+          generateObject({
+            model,
+            system,
+            prompt: userPrompt,
+            schema: generateResponseSchema,
+          })
+        )
 
         const stackIds = stack.map((s) => s.id)
         const perfReport = computePerfReport(stackIds)
