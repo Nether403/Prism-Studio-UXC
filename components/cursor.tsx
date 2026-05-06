@@ -125,12 +125,12 @@ export function Cursor() {
       <div
         ref={ringRef}
         aria-hidden
-        className="prism-cursor-ring pointer-events-none fixed left-0 top-0 z-[100] -translate-x-1/2 -translate-y-1/2 mix-blend-difference"
+        className="prism-cursor-ring pointer-events-none fixed left-0 top-0 z-[99998] -translate-x-1/2 -translate-y-1/2 mix-blend-difference"
       />
       <div
         ref={dotRef}
         aria-hidden
-        className="prism-cursor-dot pointer-events-none fixed left-0 top-0 z-[101] -translate-x-1/2 -translate-y-1/2"
+        className="prism-cursor-dot pointer-events-none fixed left-0 top-0 z-[99999] -translate-x-1/2 -translate-y-1/2"
       />
     </>
   )
