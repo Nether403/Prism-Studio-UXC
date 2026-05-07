@@ -23,7 +23,7 @@ import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import { type Signature } from "@/lib/signature"
 import { captureScreenshot } from "@/lib/capture"
-import { validateRebuildUrl, checkRobots } from "@/lib/url-guard"
+import { validateRebuildUrl, validatePublicFetchUrl, checkRobots } from "@/lib/url-guard"
 import { scrapeContent, type ScrapedContent } from "@/lib/scrape"
 import {
   rebuildRateLimit,
@@ -245,9 +245,18 @@ export async function POST(req: Request) {
   // ── 8. Fetch screenshot bytes ONCE, then run the extraction pipeline. ────
   let screenshotBytes: ArrayBuffer
   try {
-    const r = await fetch(capture.pngUrl)
-    if (!r.ok) throw new Error(`screenshot fetch ${r.status}`)
-    screenshotBytes = await r.arrayBuffer()
+    if (capture.imageBytes) {
+      screenshotBytes = capture.imageBytes
+    } else {
+      const screenshotUrl = await validatePublicFetchUrl(capture.pngUrl)
+      if (!screenshotUrl.ok) throw new Error(`blocked screenshot URL: ${screenshotUrl.code}`)
+      const r = await fetch(screenshotUrl.url.toString(), { redirect: "manual" })
+      if (r.status >= 300 && r.status < 400) throw new Error("screenshot URL redirected")
+      if (!r.ok) throw new Error(`screenshot fetch ${r.status}`)
+      const ct = r.headers.get("content-type") ?? ""
+      if (!ct.toLowerCase().startsWith("image/")) throw new Error("screenshot URL was not an image")
+      screenshotBytes = await r.arrayBuffer()
+    }
   } catch (e) {
     return err(
       "capture_fetch_failed",

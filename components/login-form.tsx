@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { safeNextPath } from "@/lib/redirects"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,7 +12,7 @@ import { Spinner } from "@/components/ui/spinner"
 export function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
-  const next = params.get("next") || "/dashboard"
+  const next = safeNextPath(params.get("next"), "/dashboard")
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")

@@ -14,10 +14,8 @@ export function JsonLd({ data }: { data: LdValue | LdValue[] }) {
     <>
       {entries.map((d, i) => (
         <script
-          // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: JSON.stringify(d) }}
           // Keys are stable per-page since the array is built deterministically.
-          // eslint-disable-next-line react/no-array-index-key
           key={i}
           type="application/ld+json"
         />

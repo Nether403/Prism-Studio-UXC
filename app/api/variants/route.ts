@@ -89,6 +89,14 @@ const MODES: Array<{
 ]
 
 export async function POST(req: Request) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return Response.json({ error: "Sign in to generate variants." }, { status: 401 })
+  }
+
   const json = await req.json().catch(() => ({}))
   const parsed = inputSchema.safeParse(json)
   if (!parsed.success) {
@@ -107,7 +115,6 @@ export async function POST(req: Request) {
   let resolvedInspirationId: string | null = null
 
   if (raw.inspirationId) {
-    const supabase = await createClient()
     const { data: row, error } = await supabase
       .from("inspirations")
       .select("id, signature")

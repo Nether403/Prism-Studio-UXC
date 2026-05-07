@@ -5,6 +5,7 @@ import { FromImageStudio, type ResumedInspiration } from "@/components/from-imag
 import type { Signature, SourceType } from "@/lib/signature"
 import { Nav } from "@/components/nav"
 import { Footer } from "@/components/footer"
+import { safeNextPath } from "@/lib/redirects"
 
 export const metadata = {
   title: "From image — UXC",
@@ -28,8 +29,10 @@ export default async function FromImagePage({
     // exact resume URL after auth. Without this, clicking "Resume" from a
     // dashboard captures strip while logged out would silently drop the
     // inspiration id.
-    const fallback =
-      sp.next ?? (sp.ref ? `/from-image?ref=${encodeURIComponent(sp.ref)}` : "/from-image")
+    const fallback = safeNextPath(
+      sp.next,
+      sp.ref ? `/from-image?ref=${encodeURIComponent(sp.ref)}` : "/from-image",
+    )
     redirect(`/auth/login?next=${encodeURIComponent(fallback)}`)
   }
 

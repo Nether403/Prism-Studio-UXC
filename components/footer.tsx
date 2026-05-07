@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import { UxcWordmark } from "@/components/uxc-wordmark"
 
 export function Footer() {
@@ -20,29 +22,29 @@ export function Footer() {
             </div>
             <ul className="mt-4 space-y-2 text-sm">
               <li>
-                <a href="/#generator" className="hover:text-primary transition">
+                <Link href="/#generator" className="hover:text-primary transition">
                   Generator
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/recipes" className="hover:text-primary transition">
+                <Link href="/recipes" className="hover:text-primary transition">
                   Recipes
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/gallery" className="hover:text-primary transition">
+                <Link href="/gallery" className="hover:text-primary transition">
                   Gallery
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/library" className="hover:text-primary transition">
+                <Link href="/library" className="hover:text-primary transition">
                   Library
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/about" className="hover:text-primary transition">
+                <Link href="/about" className="hover:text-primary transition">
                   About
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -81,19 +83,19 @@ export function Footer() {
             </div>
             <ul className="mt-4 space-y-2 text-sm">
               <li>
-                <a href="/auth/login" className="hover:text-primary transition">
+                <Link href="/auth/login" className="hover:text-primary transition">
                   Sign in
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/auth/sign-up" className="hover:text-primary transition">
+                <Link href="/auth/sign-up" className="hover:text-primary transition">
                   Sign up
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/dashboard" className="hover:text-primary transition">
+                <Link href="/dashboard" className="hover:text-primary transition">
                   My stacks
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

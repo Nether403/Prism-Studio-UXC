@@ -66,7 +66,9 @@ function isPrivateIPv4(ip: string): boolean {
 
 function isPrivateIPv6(ip: string): boolean {
   const lower = ip.toLowerCase()
+  if (lower.includes("%")) return true
   if (lower === "::" || lower === "::1") return true
+  if (lower.startsWith("0:")) return true
   if (lower.startsWith("fe80:")) return true // link-local
   if (lower.startsWith("fc") || lower.startsWith("fd")) return true // unique-local fc00::/7
   if (lower.startsWith("ff")) return true // multicast
@@ -118,7 +120,7 @@ export async function validateRebuildUrl(input: string): Promise<UrlValidationRe
   // Reject literal IPs in the hostname — we want users pasting domain names,
   // not raw addresses. Anyone trying to bypass DNS-based filtering loses here.
   const looksLikeIPv4 = /^\d+\.\d+\.\d+\.\d+$/.test(hostname)
-  const looksLikeIPv6 = hostname.startsWith("[") && hostname.endsWith("]")
+  const looksLikeIPv6 = hostname.includes(":")
   if (looksLikeIPv4 || looksLikeIPv6) {
     return { ok: false, reason: "Literal IP addresses are not allowed.", code: "literal_ip" }
   }
@@ -175,6 +177,11 @@ export async function validateRebuildUrl(input: string): Promise<UrlValidationRe
   return { ok: true, url, hostname, resolvedIps: resolved }
 }
 
+/** Validate any URL immediately before server-side fetching it. */
+export async function validatePublicFetchUrl(input: string): Promise<UrlValidationResult> {
+  return validateRebuildUrl(input)
+}
+
 // ----------------------------------------------------------------------------
 // robots.txt
 // ----------------------------------------------------------------------------
@@ -203,6 +210,9 @@ export async function checkRobots(url: URL): Promise<{ allowed: boolean; reason?
       headers: { "user-agent": "UXC-Bot/1.0 (+https://uxc.me; site-rebuild)" },
       redirect: "manual", // robots.txt redirects are usually noise
     })
+    if (res.status >= 300 && res.status < 400) {
+      return { allowed: false, reason: "robots.txt redirected; automated access is disabled for safety." }
+    }
     if (!res.ok) {
       // Most 4xx / 5xx — no robots.txt published. Allow.
       return { allowed: true }

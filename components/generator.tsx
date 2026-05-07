@@ -123,6 +123,12 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
     (manualResult ?? streamObject) as any
 
   function handleGenerate() {
+    if (!isAuthed) {
+      toast.error("Sign in to compose stacks.", {
+        description: "AI generation is account-bound to prevent abuse.",
+      })
+      return
+    }
     const rec = recommend(input)
     setRecommendation(rec)
     setSavedId(null)
@@ -521,7 +527,7 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
                   ) : (
                     <>
                       <Wand2 className="h-4 w-4" />
-                      Compose stack
+                      {isAuthed ? "Compose stack" : "Sign in to compose"}
                     </>
                   )}
                 </Button>
@@ -535,6 +541,7 @@ export function Generator({ isAuthed = false }: { isAuthed?: boolean } = {}) {
                     vibe={vibe}
                     audience={audience}
                     includePaid={includePaid}
+                    disabled={!isAuthed}
                     onPick={handleVariantPick}
                   />
                 )}

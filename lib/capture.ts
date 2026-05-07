@@ -34,6 +34,7 @@ export type CaptureResult = {
   pngUrl: string // absolute URL to the captured PNG (provider CDN today; blob later)
   hash: string // SHA-256 of the captured image bytes — the canonical cache key
   bytes: number
+  imageBytes?: ArrayBuffer // in-memory copy; avoids re-fetching provider URLs downstream
   capturedAt: string // ISO timestamp
   provider: CaptureProvider
   meta?: {
@@ -144,6 +145,7 @@ async function captureWithMicrolink(opts: CaptureOptions): Promise<CaptureResult
     pngUrl,
     hash: sha256(bytes),
     bytes: bytes.byteLength,
+    imageBytes: bytes,
     capturedAt: new Date().toISOString(),
     provider: "microlink",
     meta,
@@ -207,6 +209,7 @@ async function captureWithMock(opts: CaptureOptions): Promise<CaptureResult> {
     pngUrl: `data:image/png;base64,${ONE_BY_ONE_PNG_B64}`,
     hash: sha256(bytes.buffer),
     bytes: bytes.byteLength,
+    imageBytes: bytes.buffer,
     capturedAt: new Date().toISOString(),
     provider: "mock",
     meta: { title: opts.url },

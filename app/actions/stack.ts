@@ -42,8 +42,10 @@ export async function saveStack(input: SaveStackInput): Promise<SaveResult> {
       data: { user },
     } = await supabase.auth.getUser()
 
+    if (!user) return { error: "Sign in to save stacks" }
+
     const id = shortId()
-    const owned = !!user
+    const owned = true
     // Anonymous saves are public by default. Authenticated saves go to drafts unless asDraft === false.
     const published = owned ? input.asDraft === false : true
 
@@ -61,7 +63,7 @@ export async function saveStack(input: SaveStackInput): Promise<SaveResult> {
       theme: input.theme,
       impact_score: input.impactScore,
       perf_budget: input.perfBudget,
-      user_id: user?.id ?? null,
+      user_id: user.id,
       title: input.title ?? input.headline ?? null,
       published,
     })

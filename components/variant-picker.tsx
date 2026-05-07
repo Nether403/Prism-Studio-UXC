@@ -28,6 +28,7 @@ export type VariantPickerProps = {
   vibe: Vibe
   audience: Audience
   includePaid: boolean
+  disabled?: boolean
   onPick: (v: Variant) => void
 }
 
@@ -51,7 +52,7 @@ function aiThemeToTheme(t: GenerateTheme): Theme {
   }
 }
 
-export function VariantPicker({ prompt, vibe, audience, includePaid, onPick }: VariantPickerProps) {
+export function VariantPicker({ prompt, vibe, audience, includePaid, disabled = false, onPick }: VariantPickerProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [variants, setVariants] = useState<Variant[] | null>(null)
@@ -66,6 +67,7 @@ export function VariantPicker({ prompt, vibe, audience, includePaid, onPick }: V
   }, [])
 
   async function start() {
+    if (disabled) return
     setOpen(true)
     if (variants || loading) return
     setLoading(true)
@@ -110,12 +112,12 @@ export function VariantPicker({ prompt, vibe, audience, includePaid, onPick }: V
         variant="outline"
         size="lg"
         onClick={start}
-        disabled={prompt.trim().length < 6}
+        disabled={disabled || prompt.trim().length < 6}
         className="h-12 gap-2"
         data-cursor="hover"
       >
         <Layers className="h-4 w-4" />
-        Generate 3 variants
+        {disabled ? "Sign in for variants" : "Generate 3 variants"}
       </Button>
 
       {mounted && createPortal(

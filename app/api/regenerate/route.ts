@@ -4,6 +4,7 @@ import { recommend, type GeneratorInput } from "@/lib/recommend"
 import { generateResponseSchema } from "@/lib/generate-schema"
 import { LIBRARIES } from "@/lib/stack-data"
 import { withFallback } from "@/lib/ai-models"
+import { createClient } from "@/lib/supabase/server"
 
 export const maxDuration = 30
 
@@ -20,6 +21,14 @@ const inputSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return Response.json({ error: "Sign in to regenerate stacks." }, { status: 401 })
+  }
+
   const json = await req.json()
   const parsed = inputSchema.safeParse(json)
   if (!parsed.success) {

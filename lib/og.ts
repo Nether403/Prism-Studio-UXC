@@ -125,8 +125,11 @@ export async function fetchOgImage(input: string): Promise<OgFetchResult> {
     const res = await fetch(url.toString(), {
       signal: htmlController.signal,
       headers: { "User-Agent": USER_AGENT, Accept: "text/html,*/*" },
-      redirect: "follow",
+      redirect: "manual",
     })
+    if (res.status >= 300 && res.status < 400) {
+      return { ok: false, error: "Source page redirected. Try the final URL directly." }
+    }
     if (!res.ok) {
       return { ok: false, error: `Source returned HTTP ${res.status}.` }
     }
@@ -197,9 +200,12 @@ export async function fetchOgImage(input: string): Promise<OgFetchResult> {
   try {
     const res = await fetch(imageUrl.toString(), {
       signal: imgController.signal,
-      redirect: "follow",
+      redirect: "manual",
       headers: { "User-Agent": USER_AGENT, Accept: "image/*" },
     })
+    if (res.status >= 300 && res.status < 400) {
+      return { ok: false, error: "OG image redirected. Upload the image directly instead." }
+    }
     if (!res.ok) {
       return { ok: false, error: `OG image returned HTTP ${res.status}.` }
     }
