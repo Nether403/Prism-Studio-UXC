@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 
 import { UxcWordmark } from "@/components/uxc-wordmark"
 
@@ -111,18 +112,18 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Giant wordmark — uses Bricolage Grotesque so it matches the
-          nav lockup, with the canonical sunset gradient at very low
-          opacity so it reads as ambient brand texture rather than a
-          competing headline. */}
+        {/* Giant logo texture — low opacity so it reads as ambient brand texture
+          rather than a competing headline. */}
       <div className="overflow-hidden border-t border-border">
         <div className="mx-auto max-w-[100rem] px-6 py-12">
-          <div
+          <Image
             aria-hidden
-            className="brand-gradient font-[family-name:var(--font-bricolage)] font-extrabold lowercase tracking-[-0.07em] leading-[0.85] text-[clamp(5rem,22vw,22rem)] opacity-30 select-none"
-          >
-            uxc
-          </div>
+            src="/logoUXC.png"
+            alt=""
+            width={750}
+            height={480}
+            className="h-auto w-full max-w-[52rem] select-none opacity-30"
+          />
         </div>
       </div>
     </footer>

@@ -149,21 +149,19 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: SITE.name,
     locale: SITE.locale,
-    images: [{ url: "/uxc-mark.jpg", width: 1024, height: 1024, alt: "UXC" }],
+    images: [{ url: "/logoUXC.png", width: 750, height: 480, alt: "UXC" }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE.fullName,
     description:
       "Describe an idea. UXC curates a stack of best-in-class design libraries tuned for visual impact.",
-    images: ["/uxc-mark.jpg"],
+    images: ["/logoUXC.png"],
   },
   icons: {
-    // Single SVG favicon — the gradient mark renders identically on both
-    // light and dark browser chrome because we paint it on a baked-in
-    // dark canvas. Apple touch icon points at the 1024² brand mark JPG.
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: "/uxc-mark.jpg",
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
   },
 }
 
@@ -202,7 +200,7 @@ export default function RootLayout({
               "@type": "Organization",
               name: SITE.name,
               url: SITE_URL,
-              logo: `${SITE_URL}/icon.svg`,
+              logo: `${SITE_URL}/logoUXC.png`,
             },
           ]}
         />
