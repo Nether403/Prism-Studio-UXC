@@ -19,6 +19,7 @@ import { PrismThemeProvider } from "@/components/prism-theme-provider"
 import { Cursor } from "@/components/cursor"
 import { Toaster } from "@/components/ui/sonner"
 import { SITE_URL, SITE } from "@/lib/site"
+import { PERSON, PERSON_ID } from "@/lib/person"
 import { JsonLd } from "@/components/json-ld"
 import "./globals.css"
 
@@ -124,7 +125,10 @@ export const metadata: Metadata = {
   generator: "v0.app",
   alternates: {
     canonical: "/",
-    types: { "application/rss+xml": [{ url: "/feed.xml", title: "UXC changelog" }] },
+    types: {
+      "application/rss+xml": [{ url: "/feed.xml", title: "UXC changelog" }],
+      "text/plain": [{ url: "/llms.txt", title: "LLMs.txt" }],
+    },
   },
   keywords: [
     "UX curator",
@@ -140,7 +144,12 @@ export const metadata: Metadata = {
     "WebGPU",
     "creative coding",
     "AI design",
+    PERSON.name,
+    ...PERSON.alternateNames,
   ],
+  authors: [{ name: PERSON.name, url: `${SITE_URL}/about` }],
+  creator: PERSON.name,
+  publisher: SITE.name,
   openGraph: {
     title: SITE.fullName,
     description:
@@ -157,6 +166,17 @@ export const metadata: Metadata = {
     description:
       "Describe an idea. UXC curates a stack of best-in-class design libraries tuned for visual impact.",
     images: ["/logoUXC.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
   icons: {
     icon: [{ url: "/favicon.png", type: "image/png" }],
@@ -189,6 +209,8 @@ export default function RootLayout({
               name: SITE.name,
               url: SITE_URL,
               description: SITE.shortDescription,
+              publisher: { "@type": "Organization", name: SITE.name, url: SITE_URL },
+              author: { "@id": PERSON_ID },
               potentialAction: {
                 "@type": "SearchAction",
                 target: `${SITE_URL}/gallery?q={search_term_string}`,
@@ -201,6 +223,8 @@ export default function RootLayout({
               name: SITE.name,
               url: SITE_URL,
               logo: `${SITE_URL}/logoUXC.png`,
+              description: SITE.shortDescription,
+              founder: { "@id": PERSON_ID },
             },
           ]}
         />
