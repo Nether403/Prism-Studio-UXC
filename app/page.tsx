@@ -13,6 +13,7 @@ import { SceneMount } from "@/components/scene-mount"
 import { JsonLd } from "@/components/json-ld"
 import { createClient } from "@/lib/supabase/server"
 import { SITE_URL, SITE } from "@/lib/site"
+import { PERSON_ID } from "@/lib/person"
 
 export const revalidate = 300
 
@@ -32,6 +33,8 @@ export default async function Page() {
           operatingSystem: "Web",
           url: SITE_URL,
           description: SITE.longDescription,
+          author: { "@id": PERSON_ID },
+          creator: { "@id": PERSON_ID },
           offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
           featureList: [
             "AI-driven stack composition",

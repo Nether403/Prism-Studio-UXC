@@ -1,116 +1,92 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { Nav } from "@/components/nav"
 import { Footer } from "@/components/footer"
 import { CommandPalette } from "@/components/command-palette"
-import { JsonLd } from "@/components/json-ld"
-import { SITE_URL } from "@/lib/site"
-import { ArrowUpRight, Mail, Github, Linkedin, MapPin } from "lucide-react"
+import { JsonLd, breadcrumbList } from "@/components/json-ld"
+import { SITE_URL, SITE } from "@/lib/site"
+import {
+  PERSON,
+  PERSON_ID,
+  personJsonLd,
+  personPrimaryEmail,
+} from "@/lib/person"
+import { ArrowUpRight, Mail, Github, Linkedin, MapPin, ExternalLink } from "lucide-react"
+
+const primaryEmail = personPrimaryEmail()
 
 export const metadata: Metadata = {
-  title: "About — Martin vanDeursen",
-  description:
-    "Martin vanDeursen — independent designer/builder behind The Witness Protocol and Realm101. Based in Amsterdam, Netherlands.",
+  title: `About — ${PERSON.name}`,
+  description: PERSON.description,
+  keywords: [
+    PERSON.name,
+    ...PERSON.alternateNames,
+    "Realm101",
+    "The Witness Protocol",
+    "UXC",
+    "Amsterdam designer",
+    "Dutch Data Labs",
+    "101dev",
+    "TWPF",
+    "creative coding",
+    "UX curator",
+  ],
+  authors: [{ name: PERSON.name, url: `${SITE_URL}/about` }],
+  creator: PERSON.name,
+  publisher: SITE.name,
   alternates: { canonical: "/about" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+  },
   openGraph: {
-    title: "About — Martin vanDeursen",
-    description:
-      "The person behind UXC, The Witness Protocol, and Realm101. Amsterdam, Netherlands.",
+    title: `About — ${PERSON.name}`,
+    description: PERSON.description,
     type: "profile",
     url: "/about",
+    siteName: SITE.name,
+    locale: SITE.locale,
+    firstName: PERSON.givenName,
+    lastName: PERSON.familyName,
+    username: "Nether403",
+    images: [{ url: "/logoUXC.png", width: 750, height: 480, alt: PERSON.name }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `About — ${PERSON.name}`,
+    description: PERSON.description,
+    images: ["/logoUXC.png"],
   },
 }
 
-const PROJECTS: Array<{
-  name: string
-  url: string
-  domain: string
-  blurb: string
-}> = [
-  {
-    name: "Nether101",
-    url: "https://Nether101.nl",
-    domain: "nether101.nl",
-    blurb: "The lab — experiments, motion studies, and the ongoing search for the right line.",
-  },
-  {
-    name: "Alignment Saga",
-    url: "https://alignmentsaga.nl",
-    domain: "alignmentsaga.nl",
-    blurb: "A long-form narrative project about systems, tension, and the alignment problem.",
-  },
-  {
-    name: "Processo Ergo Sum",
-    url: "https://Processoergosum.info",
-    domain: "processoergosum.info",
-    blurb: "Process essays — thinking aloud about craft, pattern, and what survives iteration.",
-  },
-  {
-    name: "Witness Protocol",
-    url: "https://Witnessprotocol.online",
-    domain: "witnessprotocol.online",
-    blurb: "The umbrella — the studio brand under which the rest of the work assembles.",
-  },
-]
-
-const SOCIAL: Array<{
-  label: string
-  handle: string
-  url: string
-  icon: typeof Github
-}> = [
-  {
-    label: "LinkedIn",
-    handle: "in/mvd101",
-    url: "https://www.linkedin.com/in/mvd101/",
-    icon: Linkedin,
-  },
-  {
-    label: "GitHub",
-    handle: "Nether403",
-    url: "https://github.com/Nether403",
-    icon: Github,
-  },
-]
+const SOCIAL_ICONS = {
+  LinkedIn: Linkedin,
+  GitHub: Github,
+  F6S: ExternalLink,
+} as const
 
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-background">
       <JsonLd
         data={[
+          breadcrumbList(SITE_URL, [
+            { name: "Home", path: "/" },
+            { name: "About", path: "/about" },
+          ]),
           {
             "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "About", item: `${SITE_URL}/about` },
-            ],
-          },
-          {
-            "@context": "https://schema.org",
-            "@type": "Person",
-            name: "Martin vanDeursen",
-            jobTitle: "Designer / Builder",
-            worksFor: {
-              "@type": "Organization",
-              name: "Realm101",
-              brand: "The Witness Protocol",
-            },
-            address: {
-              "@type": "PostalAddress",
-              addressLocality: "Amsterdam",
-              addressCountry: "NL",
-            },
-            email: "mailto:martin@realm101.com",
+            "@type": "AboutPage",
+            "@id": `${SITE_URL}/about#webpage`,
+            name: `About — ${PERSON.name}`,
+            description: PERSON.description,
             url: `${SITE_URL}/about`,
-            sameAs: [
-              "https://www.linkedin.com/in/mvd101/",
-              "https://github.com/Nether403",
-              "https://Nether101.nl",
-              "https://alignmentsaga.nl",
-              "https://Processoergosum.info",
-              "https://Witnessprotocol.online",
-            ],
+            isPartOf: { "@type": "WebSite", name: SITE.name, url: SITE_URL },
+            about: { "@id": PERSON_ID },
+            mainEntity: { "@id": PERSON_ID },
+            inLanguage: "en",
           },
+          personJsonLd(),
         ]}
       />
       <CommandPalette />
@@ -124,11 +100,25 @@ export default function AboutPage() {
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
                 About · 01
               </div>
-              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                <span className="font-mono text-[10px] uppercase tracking-wider text-primary">
-                  Available for work
-                </span>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-primary">
+                    Available for work
+                  </span>
+                </div>
+                {/* Alternate spelling tag — aids search/entity matching for "Martin van Deursen" */}
+                {PERSON.alternateNames.map((aka) => (
+                  <div
+                    key={aka}
+                    className="inline-flex items-center gap-2 rounded-full border border-border bg-card/40 px-3 py-1"
+                  >
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      also
+                    </span>
+                    <span className="font-mono text-[10px] tracking-wider text-foreground">{aka}</span>
+                  </div>
+                ))}
               </div>
             </div>
             <div className="md:col-span-9">
@@ -137,6 +127,7 @@ export default function AboutPage() {
                 <br />
                 Designer who ships.
               </h1>
+              <p className="sr-only">Also known as {PERSON.alternateNames.join(", ")}.</p>
               <p className="mt-6 max-w-2xl text-pretty text-lg text-muted-foreground leading-relaxed">
                 Independent operator behind <span className="text-foreground">Realm101</span> and{" "}
                 <span className="text-foreground">The Witness Protocol</span> — a small studio
@@ -153,32 +144,39 @@ export default function AboutPage() {
         <div className="container mx-auto max-w-6xl px-6">
           <div className="grid gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-3">
             <Cell label="Studio">
-              <div className="font-display text-2xl tracking-tight">Realm101</div>
+              <div className="font-display text-2xl tracking-tight">{PERSON.organizations.studio}</div>
               <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                The Witness Protocol
+                {PERSON.organizations.brand}
               </p>
             </Cell>
             <Cell label="Based in">
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span className="font-display text-2xl tracking-tight">Amsterdam</span>
+                <MapPin className="h-4 w-4 text-primary" aria-hidden />
+                <span className="font-display text-2xl tracking-tight">{PERSON.location.locality}</span>
               </div>
               <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                Netherlands
+                {PERSON.location.countryName}
               </p>
             </Cell>
             <Cell label="Direct">
-              <a
-                href="mailto:martin@realm101.com"
-                data-cursor="hover"
-                className="group inline-flex items-center gap-2 font-display text-2xl tracking-tight underline-offset-4 hover:underline"
-              >
-                martin@realm101.com
-                <Mail className="h-4 w-4 text-muted-foreground transition group-hover:text-primary" />
-              </a>
-              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                Best for project briefs &amp; collaboration
-              </p>
+              <ul className="space-y-3">
+                {PERSON.emails.map((e) => (
+                  <li key={e.address}>
+                    <a
+                      href={`mailto:${e.address}`}
+                      data-cursor="hover"
+                      className="group inline-flex items-center gap-2 font-display text-lg md:text-xl tracking-tight underline-offset-4 hover:underline break-all"
+                    >
+                      {e.address}
+                      <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+                    </a>
+                    <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                      {e.label}
+                      {e.primary ? " · primary" : ""}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             </Cell>
           </div>
         </div>
@@ -203,12 +201,12 @@ export default function AboutPage() {
           </div>
 
           <div className="grid gap-px bg-border md:grid-cols-2">
-            {PROJECTS.map((p, i) => (
+            {PERSON.projects.map((p, i) => (
               <a
                 key={p.url}
                 href={p.url}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer me"
                 data-cursor="hover"
                 className="group relative bg-background p-8 md:p-10 transition hover:bg-card/40"
               >
@@ -245,25 +243,25 @@ export default function AboutPage() {
               </h2>
             </div>
             <p className="md:col-span-9 max-w-2xl text-pretty text-base text-muted-foreground leading-relaxed">
-              Two channels, two registers. LinkedIn for the formal, GitHub for the actual.
+              LinkedIn for the formal, GitHub for the actual, F6S for the founder trail.
             </p>
           </div>
 
-          <div className="grid gap-px bg-border md:grid-cols-2">
-            {SOCIAL.map((s) => {
-              const Icon = s.icon
+          <div className="grid gap-px bg-border md:grid-cols-3">
+            {PERSON.profiles.map((s) => {
+              const Icon = SOCIAL_ICONS[s.label as keyof typeof SOCIAL_ICONS] ?? ExternalLink
               return (
                 <a
                   key={s.url}
                   href={s.url}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer me"
                   data-cursor="hover"
                   className="group relative flex items-center justify-between gap-6 bg-background p-8 md:p-10 transition hover:bg-card/40"
                 >
                   <div className="flex items-center gap-5">
                     <span className="inline-flex h-12 w-12 items-center justify-center rounded-md border border-border bg-card transition group-hover:border-primary/40 group-hover:text-primary">
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-5 w-5" aria-hidden />
                     </span>
                     <div>
                       <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
@@ -283,14 +281,14 @@ export default function AboutPage() {
               Have a brief? Want to talk about a build, a bug in UXC, or something stranger? Drop
               a note — I read everything.
             </p>
-            <Link
-              href="mailto:martin@realm101.com"
+            <a
+              href={`mailto:${primaryEmail}`}
               data-cursor="hover"
               className="inline-flex items-center gap-2 self-start rounded-md bg-primary px-5 py-3 font-mono text-xs uppercase tracking-[0.2em] text-primary-foreground transition hover:opacity-90 md:self-auto"
             >
               Start a conversation
               <ArrowUpRight className="h-4 w-4" />
-            </Link>
+            </a>
           </div>
         </div>
       </section>
